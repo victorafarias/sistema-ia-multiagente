@@ -1,0 +1,364 @@
+/* static/style.css */
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    background-color: #f4f4f9;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 95%;
+    margin: auto;
+    background: #fff;
+    padding: 20px 30px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+}
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.header-container p {
+    margin-top: -10px;
+    color: #6c757d;
+}
+
+.refresh-btn {
+    padding: 10px 15px;
+    font-size: 16px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    height: fit-content;
+}
+
+.refresh-btn:hover {
+    background-color: #218838;
+}
+
+h1, h2 {
+    color: #444;
+}
+
+textarea {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+    font-size: 16px;
+    box-sizing: border-box;
+}
+
+button[type="submit"] {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button[type="submit"]:hover {
+    background-color: #0056b3;
+}
+
+.results-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    margin-top: 30px;
+    /* Permite que as colunas alinhem no topo se tiverem tamanhos diferentes */
+    align-items: flex-start;
+}
+
+.result-column {
+    flex: 1;
+    min-width: 0;
+    background-color: #fafafa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+}
+
+.column-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: #e9ecef;
+    border-bottom: 1px solid #e0e0e0;
+    border-radius: 8px 8px 0 0;
+}
+
+.column-header h2 {
+    margin: 0;
+    font-size: 1.2em;
+}
+
+.copy-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.copy-btn:hover {
+    background-color: #5a6268;
+}
+
+/* CORREÇÃO: Removida a altura fixa e a rolagem individual */
+.output-box {
+    padding: 15px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    /* A altura agora será automática, baseada no conteúdo */
+}
+
+/* Estilos para o Loader e Barra de Progresso */
+#loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.loader-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: white;
+    text-align: center;
+}
+
+.loader-spinner {
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #007bff;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1.5s linear infinite;
+    margin-bottom: 20px;
+}
+
+#loader-message {
+    font-size: 1.2em;
+    margin-bottom: 20px;
+}
+
+.progress-bar-container {
+    width: 300px;
+    height: 20px;
+    background-color: #555;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    width: 0%;
+    height: 100%;
+    background-color: #28a745;
+    border-radius: 10px;
+    transition: width 0.5s ease-in-out;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Estilos para a caixa de erro */
+.error-box {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid #f5c6cb;
+    border-radius: 5px;
+    position: relative;
+}
+
+.close-btn-error {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    font-weight: bold;
+    color: #721c24;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close-btn-error:hover {
+    opacity: 0.7;
+}
+
+/* Estilos para o Seletor de Modo */
+.controls-container {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.mode-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #555;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: #28a745;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.slider.round {
+    border-radius: 24px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+/* Estilos para tabelas e código gerados pelo Markdown */
+.output-box table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 1em;
+}
+.output-box th, .output-box td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+.output-box th {
+    background-color: #f2f2f2;
+}
+.output-box pre {
+    background-color: #eee;
+    padding: 10px;
+    border-radius: 5px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+.output-box code {
+    font-family: "Courier New", Courier, monospace;
+}
+
+/* static/style.css (ADICIONAR NO FINAL) */
+
+/* Efeito visual ao arrastar arquivos sobre a textarea */
+textarea.drag-over {
+    border-color: #007bff;
+    border-style: dashed;
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+}
+
+/* Container da lista de arquivos */
+#file-list-container {
+    display: none; /* Começa escondido */
+    margin-top: -5px;
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+#file-list-container p {
+    margin: 0 0 5px 0;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+#file-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+#file-list li {
+    background-color: #e9ecef;
+    padding: 5px 10px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.remove-file-btn {
+    cursor: pointer;
+    color: #dc3545;
+    font-weight: bold;
+    font-size: 18px;
+    margin-left: 10px;
+}
+
+.remove-file-btn:hover {
+    color: #a02430;
+}

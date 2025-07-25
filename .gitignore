@@ -1,0 +1,12 @@
+# Arquivos de ambiente virtual
+.venv311/
+__pycache__/
+
+# Arquivo de segredos
+.env
+
+# Arquivos de upload temporários
+uploads/
+
+# Arquivos do VS Code
+.vscode/
