@@ -5,17 +5,17 @@ import markdown2
 import json
 import time
 import os
-import uuid # Para gerar nomes de arquivo únicos
+import uuid
 
 # Importações do LangChain
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 
 # Importa os LLMs
-from llms import grok_llm, claude_llm, gemini_llm
+from llms import claude_llm, grok_llm, gemini_llm
 
 # Importa os prompts
-from config import PROMPT_GROK, PROMPT_CLAUDE_SONNET, PROMPT_GEMINI
+from config import PROMPT_CLAUDE_SONNET, PROMPT_GROK, PROMPT_GEMINI
 
 # Importa nosso processador RAG
 from rag_processor import get_relevant_context
@@ -24,8 +24,7 @@ app = Flask(__name__)
 
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024 
 
-if not os.path.exists('uploads'):
-    os.makedirs('uploads')
+# A linha 'os.makedirs('uploads')' foi removida daqui, pois agora é gerenciada pelo Dockerfile.
 
 @app.route('/')
 def index():
@@ -47,22 +46,21 @@ def process():
                 temp_file_paths.append(file_path)
 
     def generate_stream(current_mode, form_data, file_paths):
-        # Lógica de simulação atualizada para a nova ordem
         if current_mode == 'test':
             mock_text = form_data.get('mock_text', 'Este é um texto de simulação.')
             mock_html = markdown2.markdown(mock_text, extras=["fenced-code-blocks", "tables"])
             
+            # --- CORREÇÃO APLICADA AQUI ---
             yield f"data: {json.dumps({'progress': 0, 'message': 'Simulando Etapa 1: GROK...'})}\n\n"
             time.sleep(1)
-            # O primeiro resultado agora vai para a coluna do GROK
+            # O primeiro resultado agora vai corretamente para 'grok-output'
             yield f"data: {json.dumps({'progress': 33, 'message': 'Simulando Etapa 2: Claude Sonnet...', 'partial_result': {'id': 'grok-output', 'content': mock_html}})}\n\n"
             time.sleep(1)
-            # O segundo resultado vai para a coluna do Sonnet
+            # O segundo resultado agora vai corretamente para 'sonnet-output'
             yield f"data: {json.dumps({'progress': 66, 'message': 'Simulando Etapa 3: Gemini...', 'partial_result': {'id': 'sonnet-output', 'content': mock_html}})}\n\n"
             time.sleep(1)
             yield f"data: {json.dumps({'progress': 100, 'message': 'Simulação concluída!', 'partial_result': {'id': 'gemini-output', 'content': mock_html}, 'done': True})}\n\n"
         
-        # Lógica real com a ordem de execução alterada
         else:
             solicitacao_usuario = form_data.get('solicitacao', '')
             if not solicitacao_usuario:
@@ -70,11 +68,9 @@ def process():
                 return
 
             try:
-                # --- ETAPA RAG (continua sendo o passo zero) ---
                 yield f"data: {json.dumps({'progress': 0, 'message': 'Processando arquivos e extraindo contexto...'})}\n\n"
                 rag_context = get_relevant_context(file_paths, solicitacao_usuario)
                 
-                # --- ETAPA 1: GROK (agora o primeiro) ---
                 yield f"data: {json.dumps({'progress': 15, 'message': 'O GROK está processando sua solicitação com os arquivos...'})}\n\n"
                 prompt_grok = PromptTemplate(template=PROMPT_GROK, input_variables=["solicitacao_usuario", "rag_context"])
                 chain_grok = LLMChain(llm=grok_llm, prompt=prompt_grok)
@@ -82,22 +78,15 @@ def process():
                 grok_html = markdown2.markdown(resposta_grok, extras=["fenced-code-blocks", "tables"])
                 yield f"data: {json.dumps({'progress': 33, 'message': 'Agora, o Claude Sonnet está aprofundando o texto...', 'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
                 
-                # --- ETAPA 2: Claude Sonnet (agora o segundo) ---
                 prompt_sonnet = PromptTemplate(template=PROMPT_CLAUDE_SONNET, input_variables=["solicitacao_usuario", "texto_para_analise"])
-                
-                # Usamos .bind() para anexar o parâmetro max_tokens ao modelo nesta chamada específica.
-                claude_with_max_tokens = claude_llm.bind(max_tokens=10000)
+                claude_with_max_tokens = claude_llm.bind(max_tokens=8000)
                 chain_sonnet = LLMChain(llm=claude_with_max_tokens, prompt=prompt_sonnet)
-
-                # O input agora é a resposta do GROK
                 resposta_sonnet = chain_sonnet.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_grok})['text']
                 sonnet_html = markdown2.markdown(resposta_sonnet, extras=["fenced-code-blocks", "tables"])
                 yield f"data: {json.dumps({'progress': 66, 'message': 'Estamos quase lá! Seu texto está passando por uma revisão final com o Gemini...', 'partial_result': {'id': 'sonnet-output', 'content': sonnet_html}})}\n\n"
                 
-                # --- ETAPA 3: Gemini (continua o último) ---
                 prompt_gemini = PromptTemplate(template=PROMPT_GEMINI, input_variables=["solicitacao_usuario", "texto_para_analise"])
                 chain_gemini = LLMChain(llm=gemini_llm, prompt=prompt_gemini)
-                # O input agora é a resposta do SONNET
                 resposta_gemini = chain_gemini.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_sonnet})['text']
                 gemini_html = markdown2.markdown(resposta_gemini, extras=["fenced-code-blocks", "tables"])
                 yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento concluído!', 'partial_result': {'id': 'gemini-output', 'content': gemini_html}, 'done': True})}\n\n"
