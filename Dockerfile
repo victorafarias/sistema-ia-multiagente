@@ -7,9 +7,8 @@ WORKDIR /app
 # Define a variável de ambiente para o cache
 ENV HF_HOME=/app/.cache
 
-# 1. Cria o diretório de cache.
-# 2. Dá permissão de escrita para o usuário padrão do contêiner (ID 1000).
-RUN mkdir -p /app/.cache && chown -R 1000:1000 /app/.cache
+# e dá permissão de escrita para o usuário padrão do contêiner.
+RUN mkdir -p /app/.cache /app/uploads && chown -R 1000:1000 /app/.cache /app/uploads
 
 # Copia o arquivo de dependências primeiro para aproveitar o cache do Docker
 COPY requirements.txt requirements.txt
