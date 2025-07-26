@@ -21,3 +21,6 @@ COPY . .
 
 # Comando para iniciar o servidor web de produção (gunicorn)
 CMD ["gunicorn", "--bind", "0.0.0.0:7860", "app:app"]
+
+# Adiciona o parâmetro --timeout 300 para aumentar o tempo limite para 300 segundos (5 minutos)
+CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--timeout", "300", "app:app"]
