@@ -40,6 +40,7 @@ PROMPT_GROK = """
     4. Use exemplos práticos quando apropriado para ilustrar conceitos
     5. Mantenha tom respeitoso e reflexivo ao longo do texto
     6. Organize o conteúdo de forma lógica e progressiva
+    7. Evite usar um estilo de escrita muito característico de textos gerados com IA, como por exemplo: "Não é mera..., mas é...". Coisas assim. Seja mais direto.
   </instructions>
 </prompt>
 """
@@ -65,6 +66,7 @@ Com base na solicitação original do usuário e no texto gerado pelo primeiro e
 4.  **Faça Correções:** Corrija eventuais imprecisões conceituais ou argumentativas.
 5.  **Não Resuma ou Reduza:** Seu objetivo é expandir e aprofundar, nunca encurtar o texto. O resultado final deve ser uma versão mais completa e robusta do que a original.
 6.  **Mantenha o Estilo:** Respeite o estilo de linguagem e o tom do texto original.
+7.  **Evite usar um estilo de escrita muito característico de textos gerados com IA, como por exemplo: "Não é mera..., mas é...". Coisas assim. Seja mais direto.
 
 Reescreva o texto completo, incorporando suas melhorias, detalhamentos e correções.
 """
@@ -90,6 +92,7 @@ Você é o revisor final. Sua função é polir e aperfeiçoar o texto que já p
 4.  **Não Resuma ou Reduza:** Assim como o revisor anterior, seu papel é adicionar valor e profundidade, não remover conteúdo.
 5.  **Garantia de Qualidade:** Assegure que o texto final atende a todos os requisitos da solicitação original do usuário de forma exemplar.
 6.  **Exiba na resposta apenas o texto revisado, sem nenhuma outra mensagem para o usuário.
+7.  **Evite usar um estilo de escrita muito característico de textos gerados com IA, como por exemplo: "Não é mera..., mas é...". Coisas assim. Seja mais direto.
 
 Reescreva o texto completo com suas melhorias finais. O texto deve estar impecável e pronto para publicação.
 """
