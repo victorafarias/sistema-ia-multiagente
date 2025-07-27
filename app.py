@@ -68,16 +68,24 @@ def process():
                     # --- LÓGICA ATÔMICA (PARALELA) CORRIGIDA ---
                     results = {}
                     threads = []
-                    def run_chain(chain, inputs, key):
-                        try:
-                            result = chain.invoke(inputs)['text']
-                            # Validação dentro da thread
-                            if not result or not result.strip():
-                                results[key] = "Error:EmptyResponse"
-                            else:
-                                results[key] = result
-                        except Exception as e:
-                            results[key] = f"Erro ao processar {key}: {e}"
+                    
+                    # --- FUNÇÃO ATUALIZADA COM TIMEOUT ---
+                    def run_chain_with_timeout(chain, inputs, key, timeout=300):
+                        def task():
+                            return chain.invoke(inputs)['text']
+                        
+                        with concurrent.futures.ThreadPoolExecutor() as executor:
+                            future = executor.submit(task)
+                            try:
+                                result = future.result(timeout=timeout)
+                                if not result or not result.strip():
+                                    results[key] = "Error:EmptyResponse"
+                                else:
+                                    results[key] = result
+                            except concurrent.futures.TimeoutError:
+                                results[key] = f"Erro ao processar {key.upper()}: Tempo limite excedido (Timeout)."
+                            except Exception as e:
+                                results[key] = f"Erro ao processar {key.upper()}: {e}"
 
                     models = {'grok': grok_llm, 'sonnet': claude_llm, 'gemini': gemini_llm}
                     prompt = PromptTemplate(template=PROMPT_ATOMICO_INICIAL, input_variables=["solicitacao_usuario", "rag_context"])
@@ -85,7 +93,8 @@ def process():
                     
                     for name, llm in models.items():
                         chain = LLMChain(llm=llm, prompt=prompt)
-                        thread = threading.Thread(target=run_chain, args=(chain, {"solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context}, name))
+                        # A thread agora chama a função com timeout
+                        thread = threading.Thread(target=run_chain_with_timeout, args=(chain, {"solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context}, name))
                         threads.append(thread)
                         thread.start()
 

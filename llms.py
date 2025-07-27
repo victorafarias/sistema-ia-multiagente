@@ -29,6 +29,5 @@ claude_llm = ChatAnthropic(
 # Gemini
 gemini_llm = ChatGoogleGenerativeAI(
     google_api_key=os.getenv("GOOGLE_API_KEY"),
-    model=os.getenv("GEMINI_MODEL_ID"),
-    timeout=300
+    model=os.getenv("GEMINI_MODEL_ID")    
 )
