@@ -65,31 +65,55 @@ def process():
                 rag_context = get_relevant_context(file_paths, solicitacao_usuario)
                 
                 if processing_mode == 'atomic':
+                    # --- LÓGICA ATÔMICA (PARALELA) CORRIGIDA ---
                     results = {}
                     threads = []
                     def run_chain(chain, inputs, key):
-                        try: results[key] = chain.invoke(inputs)['text']
-                        except Exception as e: results[key] = f"Erro ao processar {key}: {e}"
+                        try:
+                            result = chain.invoke(inputs)['text']
+                            # Validação dentro da thread
+                            if not result or not result.strip():
+                                results[key] = "Error:EmptyResponse"
+                            else:
+                                results[key] = result
+                        except Exception as e:
+                            results[key] = f"Erro ao processar {key}: {e}"
 
                     models = {'grok': grok_llm, 'sonnet': claude_llm, 'gemini': gemini_llm}
                     prompt = PromptTemplate(template=PROMPT_ATOMICO_INICIAL, input_variables=["solicitacao_usuario", "rag_context"])
                     yield f"data: {json.dumps({'progress': 15, 'message': 'Iniciando processamento paralelo...'})}\n\n"
+                    
                     for name, llm in models.items():
                         chain = LLMChain(llm=llm, prompt=prompt)
                         thread = threading.Thread(target=run_chain, args=(chain, {"solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context}, name))
                         threads.append(thread)
                         thread.start()
+
                     for thread in threads:
                         thread.join()
+                    
+                    # --- NOVA VALIDAÇÃO APÓS A CONCLUSÃO DAS THREADS ---
+                    for key, result in results.items():
+                        if result == "Error:EmptyResponse":
+                            error_msg = f"Falha no serviço {key.upper()}: Sem resposta."
+                            yield f"data: {json.dumps({'error': error_msg})}\n\n"
+                            return # Interrompe o processo
+                        elif isinstance(result, str) and result.startswith("Erro ao processar"):
+                            yield f"data: {json.dumps({'error': result})}\n\n"
+                            return # Interrompe o processo
+
                     yield f"data: {json.dumps({'progress': 80, 'message': 'Todos os modelos responderam. Formatando saída...'})}\n\n"
-                    grok_html = markdown2.markdown(results.get('grok', 'Falha ao obter resposta.'), extras=["fenced-code-blocks", "tables"])
+                    
+                    grok_html = markdown2.markdown(results.get('grok', ''), extras=["fenced-code-blocks", "tables"])
                     yield f"data: {json.dumps({'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
-                    sonnet_html = markdown2.markdown(results.get('sonnet', 'Falha ao obter resposta.'), extras=["fenced-code-blocks", "tables"])
+                    sonnet_html = markdown2.markdown(results.get('sonnet', ''), extras=["fenced-code-blocks", "tables"])
                     yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': sonnet_html}})}\n\n"
-                    gemini_html = markdown2.markdown(results.get('gemini', 'Falha ao obter resposta.'), extras=["fenced-code-blocks", "tables"])
+                    gemini_html = markdown2.markdown(results.get('gemini', ''), extras=["fenced-code-blocks", "tables"])
                     yield f"data: {json.dumps({'partial_result': {'id': 'gemini-output', 'content': gemini_html}})}\n\n"
+                    
                     yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento Atômico concluído!', 'done': True, 'mode': 'atomic'})}\n\n"
                 else:
+                    # --- LÓGICA HIERÁRQUICA (SEQUENCIAL) ---
                     yield f"data: {json.dumps({'progress': 15, 'message': 'O GROK está processando sua solicitação com os arquivos...'})}\n\n"
                     prompt_grok = PromptTemplate(template=PROMPT_HIERARQUICO_GROK, input_variables=["solicitacao_usuario", "rag_context"])
                     chain_grok = LLMChain(llm=grok_llm, prompt=prompt_grok)
@@ -144,9 +168,12 @@ def merge():
             if not resposta_merge or not resposta_merge.strip():
                 raise ValueError("Falha no serviço de Merge (GROK): Sem resposta.")
             
+            # --- NOVA LÓGICA: CALCULAR PALAVRAS ---
+            word_count = len(resposta_merge.split())
             merge_html = markdown2.markdown(resposta_merge, extras=["fenced-code-blocks", "tables"])
             
-            yield f"data: {json.dumps({'progress': 100, 'message': 'Merge concluído!', 'final_result': {'content': merge_html}, 'done': True})}\n\n"
+            # Envia o resultado final junto com a contagem de palavras
+            yield f"data: {json.dumps({'progress': 100, 'message': 'Merge concluído!', 'final_result': {'content': merge_html, 'word_count': word_count}, 'done': True})}\n\n"
 
         except Exception as e:
             print(f"Erro no processo de merge: {e}")

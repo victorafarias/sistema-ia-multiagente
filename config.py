@@ -172,7 +172,7 @@ Com base na solicitação original do usuário e nos textos-base fornecidos, sua
 - **Analise o texto:** Verifique a coesão, coerência e profundidade dos argumentos.
 - **Consolidação:** Identifique os pontos fortes de cada texto e gere um texto final consolidado. Cuide para o que texto não fique redundante. Ou seja, voltando nos mesmos assuntos e conceitos.
 - **Faça Correções:** Corrija eventuais imprecisões conceituais ou argumentativas.
-- **Não Resuma ou Reduza:** Seu objetivo é expandir e aprofundar, nunca encurtar o texto. O resultado final deve ser uma versão mais completa e robusta do que a original.
+- **Não Resuma ou Reduza o texto:** Seu objetivo é expandir e aprofundar, nunca encurtar o texto. O resultado final deve ser uma versão mais completa e robusta do que a original, e deve obedecer o mínimo de 4000 palavras.
 - **Mantenha o Estilo:** Respeite o estilo de linguagem e o tom do texto original.
 - **Evite usar um estilo de escrita muito característico de textos gerados com IA, como por exemplo: "Não é mera..., mas é...". Coisas assim. Seja mais direto.
 - **Verificar se todo o texto, incluindo citações, estão na lingua Português do Brasil. Traduza as que não estiverem.
