@@ -99,7 +99,7 @@ def process():
                     yield f"data: {json.dumps({'progress': 33, 'message': 'Agora, o Claude Sonnet está aprofundando o texto...', 'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
                     
                     prompt_sonnet = PromptTemplate(template=PROMPT_HIERARQUICO_SONNET, input_variables=["solicitacao_usuario", "texto_para_analise"])
-                    claude_with_max_tokens = claude_llm.bind(max_tokens=8000)
+                    claude_with_max_tokens = claude_llm.bind(max_tokens=12000)
                     chain_sonnet = LLMChain(llm=claude_with_max_tokens, prompt=prompt_sonnet)
                     resposta_sonnet = chain_sonnet.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_grok})['text']
                     if not resposta_sonnet or not resposta_sonnet.strip(): raise ValueError("Falha no serviço Claude Sonnet: Sem resposta.")
@@ -118,7 +118,7 @@ def process():
 
     return Response(generate_stream(mode, form_data, temp_file_paths), mimetype='text/event-stream')
 
-# --- ROTA DE MERGE ATUALIZADA PARA STREAMING ---
+# --- ROTA DE MERGE ATUALIZADA PARA USAR GROK ---
 @app.route('/merge', methods=['POST'])
 def merge():
     data = request.get_json()
@@ -129,10 +129,10 @@ def merge():
             
             prompt_merge = PromptTemplate(template=PROMPT_ATOMICO_MERGE, input_variables=["solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
             
-            claude_with_max_tokens = claude_llm.bind(max_tokens=12000)
-            chain_merge = LLMChain(llm=claude_with_max_tokens, prompt=prompt_merge)
+            # ATUALIZAÇÃO: O merge agora será feito pelo GROK
+            chain_merge = LLMChain(llm=grok_llm, prompt=prompt_merge)
 
-            yield f"data: {json.dumps({'progress': 50, 'message': 'Enviando textos para o Claude Sonnet para consolidação...'})}\n\n"
+            yield f"data: {json.dumps({'progress': 50, 'message': 'Enviando textos para o GROK para consolidação...'})}\n\n"
 
             resposta_merge = chain_merge.invoke({
                 "solicitacao_usuario": data.get('solicitacao_usuario'),
@@ -142,7 +142,7 @@ def merge():
             })['text']
             
             if not resposta_merge or not resposta_merge.strip():
-                raise ValueError("Falha no serviço de Merge (Claude Sonnet): Sem resposta.")
+                raise ValueError("Falha no serviço de Merge (GROK): Sem resposta.")
             
             merge_html = markdown2.markdown(resposta_merge, extras=["fenced-code-blocks", "tables"])
             

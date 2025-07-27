@@ -61,7 +61,7 @@ Com base na solicitação original do usuário e no texto gerado pelo primeiro e
 ---
 
 **Suas Instruções:**
-1.  **Valide se o texto atingiu a quantidade de palavras mínimas (4000 palavras)**.
+1.  **Valide se o texto atingiu a quantidade de palavras mínimas (4000 palavras) e máxima (5000 palavras)**.
 2.  **Analise o texto:** Verifique a coesão, coerência e profundidade dos argumentos.
 3.  **Aprofunde e Detalhe:** Identifique pontos que podem ser mais explorados. Adicione detalhes, exemplos e nuances que enriqueçam o conteúdo original.
 4.  **Faça Correções:** Corrija eventuais imprecisões conceituais ou argumentativas.
@@ -88,7 +88,7 @@ Você é o revisor final. Sua função é polir e aperfeiçoar o texto que já p
 
 **Suas Instruções:**
 1.  **Análise Crítica Final:** Leia o texto atentamente, buscando a máxima qualidade, clareza e profundidade.
-2.  **Valide se o texto atingiu a quantidade de palavras mínimas (4000 palavras).**
+2.  **Valide se o texto atingiu a quantidade de palavras mínimas (4000 palavras) e máxima (5000 palavras)**.
 3.  **Correções e Complementos Finais:** Adicione os toques finais. Melhore a fluidez entre os parágrafos, enriqueça o vocabulário e adicione insights que possam ter sido omitidos.
 4.  **Não Resuma ou Reduza:** Assim como o revisor anterior, seu papel é adicionar valor e profundidade, não remover conteúdo.
 5.  **Garantia de Qualidade:** Assegure que o texto final atende a todos os requisitos da solicitação original do usuário de forma exemplar.
@@ -168,7 +168,7 @@ Com base na solicitação original do usuário e nos textos-base fornecidos, sua
 
 **Suas Instruções:**
 - **Estrutura:** Analise e escolha a melhor estrutura de seções entre os 3 textos e aplique no texto consolidado. A melhor estrutura de seções é aquela que melhor entendeu o objetivo da solicitação do usuário e que mais conseguir se aprofundar na abordagem do tema.
-- **Valide se o texto atingiu a quantidade de palavras mínimas (4000 palavras).
+- **Valide se o texto atingiu a quantidade de palavras mínimas (4000 palavras) e máxima (5000 palavras)**.
 - **Analise o texto:** Verifique a coesão, coerência e profundidade dos argumentos.
 - **Consolidação:** Identifique os pontos fortes de cada texto e gere um texto final consolidado. Cuide para o que texto não fique redundante. Ou seja, voltando nos mesmos assuntos e conceitos.
 - **Faça Correções:** Corrija eventuais imprecisões conceituais ou argumentativas.
