@@ -362,3 +362,50 @@ textarea.drag-over {
 .remove-file-btn:hover {
     color: #a02430;
 }
+
+/* static/style.css (ADICIONAR NO FINAL) */
+
+/* Botão Flutuante de Merge */
+.floating-merge-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 999;
+    padding: 15px 25px;
+    font-size: 18px;
+    font-weight: bold;
+    background-color: #ffc107; /* Amarelo/Laranja */
+    color: #212529;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+}
+
+.floating-merge-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+}
+
+/* Container do Resultado Final */
+#final-result-container {
+    margin: 40px auto 0 auto;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    width: 60%;
+}
+
+#final-result-container h2 {
+    text-align: center;
+    margin-top: 0;
+}
+
+/* Responsividade para o container final em telas menores */
+@media (max-width: 768px) {
+    #final-result-container {
+        width: 90%;
+    }
+}
