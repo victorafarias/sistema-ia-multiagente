@@ -22,11 +22,13 @@ grok_llm = GrokChatModel(
 # Claude Sonnet
 claude_llm = ChatAnthropic(
     api_key=os.getenv("ANTHROPIC_API_KEY"),
-    model_name=os.getenv("CLAUDE_MODEL_ID")
+    model_name=os.getenv("CLAUDE_MODEL_ID"),
+    timeout=300
 )
 
 # Gemini
 gemini_llm = ChatGoogleGenerativeAI(
     google_api_key=os.getenv("GOOGLE_API_KEY"),
-    model=os.getenv("GEMINI_MODEL_ID")
+    model=os.getenv("GEMINI_MODEL_ID"),
+    timeout=300
 )
