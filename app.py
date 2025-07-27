@@ -7,6 +7,7 @@ import time
 import os
 import uuid
 import threading
+import concurrent.futures # Nova importação para timeout
 
 # Importações do LangChain
 from langchain.prompts import PromptTemplate
@@ -65,11 +66,9 @@ def process():
                 rag_context = get_relevant_context(file_paths, solicitacao_usuario)
                 
                 if processing_mode == 'atomic':
-                    # --- LÓGICA ATÔMICA (PARALELA) CORRIGIDA ---
                     results = {}
                     threads = []
                     
-                    # --- FUNÇÃO ATUALIZADA COM TIMEOUT ---
                     def run_chain_with_timeout(chain, inputs, key, timeout=300):
                         def task():
                             return chain.invoke(inputs)['text']
@@ -93,7 +92,6 @@ def process():
                     
                     for name, llm in models.items():
                         chain = LLMChain(llm=llm, prompt=prompt)
-                        # A thread agora chama a função com timeout
                         thread = threading.Thread(target=run_chain_with_timeout, args=(chain, {"solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context}, name))
                         threads.append(thread)
                         thread.start()
@@ -101,15 +99,11 @@ def process():
                     for thread in threads:
                         thread.join()
                     
-                    # --- NOVA VALIDAÇÃO APÓS A CONCLUSÃO DAS THREADS ---
                     for key, result in results.items():
-                        if result == "Error:EmptyResponse":
-                            error_msg = f"Falha no serviço {key.upper()}: Sem resposta."
+                        if result == "Error:EmptyResponse" or "Erro ao processar" in result:
+                            error_msg = result if "Erro ao processar" in result else f"Falha no serviço {key.upper()}: Sem resposta."
                             yield f"data: {json.dumps({'error': error_msg})}\n\n"
-                            return # Interrompe o processo
-                        elif isinstance(result, str) and result.startswith("Erro ao processar"):
-                            yield f"data: {json.dumps({'error': result})}\n\n"
-                            return # Interrompe o processo
+                            return
 
                     yield f"data: {json.dumps({'progress': 80, 'message': 'Todos os modelos responderam. Formatando saída...'})}\n\n"
                     
@@ -132,7 +126,7 @@ def process():
                     yield f"data: {json.dumps({'progress': 33, 'message': 'Agora, o Claude Sonnet está aprofundando o texto...', 'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
                     
                     prompt_sonnet = PromptTemplate(template=PROMPT_HIERARQUICO_SONNET, input_variables=["solicitacao_usuario", "texto_para_analise"])
-                    claude_with_max_tokens = claude_llm.bind(max_tokens=12000)
+                    claude_with_max_tokens = claude_llm.bind(max_tokens=8000)
                     chain_sonnet = LLMChain(llm=claude_with_max_tokens, prompt=prompt_sonnet)
                     resposta_sonnet = chain_sonnet.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_grok})['text']
                     if not resposta_sonnet or not resposta_sonnet.strip(): raise ValueError("Falha no serviço Claude Sonnet: Sem resposta.")
@@ -145,13 +139,14 @@ def process():
                     if not resposta_gemini or not resposta_gemini.strip(): raise ValueError("Falha no serviço Gemini: Sem resposta.")
                     gemini_html = markdown2.markdown(resposta_gemini, extras=["fenced-code-blocks", "tables"])
                     yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento concluído!', 'partial_result': {'id': 'gemini-output', 'content': gemini_html}, 'done': True, 'mode': 'hierarchical'})}\n\n"
+
             except Exception as e:
                 print(f"Ocorreu um erro durante o processamento: {e}")
                 yield f"data: {json.dumps({'error': f'Ocorreu um erro inesperado na aplicação: {e}'})}\n\n"
 
     return Response(generate_stream(mode, form_data, temp_file_paths), mimetype='text/event-stream')
 
-# --- ROTA DE MERGE ATUALIZADA PARA USAR GROK ---
+# --- ROTA PARA O MERGE ---
 @app.route('/merge', methods=['POST'])
 def merge():
     data = request.get_json()
@@ -162,7 +157,6 @@ def merge():
             
             prompt_merge = PromptTemplate(template=PROMPT_ATOMICO_MERGE, input_variables=["solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
             
-            # ATUALIZAÇÃO: O merge agora será feito pelo GROK
             chain_merge = LLMChain(llm=grok_llm, prompt=prompt_merge)
 
             yield f"data: {json.dumps({'progress': 50, 'message': 'Enviando textos para o GROK para consolidação...'})}\n\n"
@@ -177,11 +171,9 @@ def merge():
             if not resposta_merge or not resposta_merge.strip():
                 raise ValueError("Falha no serviço de Merge (GROK): Sem resposta.")
             
-            # --- NOVA LÓGICA: CALCULAR PALAVRAS ---
             word_count = len(resposta_merge.split())
             merge_html = markdown2.markdown(resposta_merge, extras=["fenced-code-blocks", "tables"])
             
-            # Envia o resultado final junto com a contagem de palavras
             yield f"data: {json.dumps({'progress': 100, 'message': 'Merge concluído!', 'final_result': {'content': merge_html, 'word_count': word_count}, 'done': True})}\n\n"
 
         except Exception as e:
