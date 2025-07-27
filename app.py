@@ -49,11 +49,14 @@ def process():
         solicitacao_usuario = form_data.get('solicitacao', '')
         
         if current_mode == 'test':
-            # Lógica de simulação (simplificada para focar na lógica real)
             mock_text = form_data.get('mock_text', 'Este é um texto de simulação.')
             mock_html = markdown2.markdown(mock_text, extras=["fenced-code-blocks", "tables"])
             yield f"data: {json.dumps({'progress': 100, 'message': 'Simulação concluída!', 'partial_result': {'id': 'grok-output', 'content': mock_html}, 'done': True, 'mode': 'atomic' if processing_mode == 'atomic' else 'hierarchical'})}\n\n"
-        
+            # Simula o preenchimento de todas as caixas no modo teste
+            if processing_mode == 'atomic':
+                yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': mock_html}})}\n\n"
+                yield f"data: {json.dumps({'partial_result': {'id': 'gemini-output', 'content': mock_html}})}\n\n"
+
         else:
             if not solicitacao_usuario:
                 yield f"data: {json.dumps({'error': 'Solicitação não fornecida.'})}\n\n"
@@ -64,7 +67,7 @@ def process():
                 rag_context = get_relevant_context(file_paths, solicitacao_usuario)
                 
                 if processing_mode == 'atomic':
-                    # --- LÓGICA ATÔMICA (PARALELA) ---
+                    # --- LÓGICA ATÔMICA (PARALELA) CORRIGIDA ---
                     results = {}
                     threads = []
 
@@ -74,37 +77,38 @@ def process():
                         except Exception as e:
                             results[key] = f"Erro ao processar {key}: {e}"
 
-                    # Configurar e iniciar threads
                     models = {'grok': grok_llm, 'sonnet': claude_llm, 'gemini': gemini_llm}
                     prompt = PromptTemplate(template=PROMPT_ATOMICO_INICIAL, input_variables=["solicitacao_usuario", "rag_context"])
                     
+                    yield f"data: {json.dumps({'progress': 15, 'message': 'Iniciando processamento paralelo...'})}\n\n"
+
+                    # 1. Inicia todas as threads
                     for name, llm in models.items():
                         chain = LLMChain(llm=llm, prompt=prompt)
                         thread = threading.Thread(target=run_chain, args=(chain, {"solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context}, name))
                         threads.append(thread)
                         thread.start()
 
-                    # Monitorar e enviar resultados conforme chegam
-                    completed_threads = 0
-                    while completed_threads < len(threads):
-                        for i, thread in enumerate(threads):
-                            key = list(models.keys())[i]
-                            if not thread.is_alive() and key not in results:
-                                # Se a thread terminou mas não há resultado, algo deu errado
-                                results[key] = f"Falha na thread para {key}."
+                    # 2. Aguarda a conclusão de todas as threads
+                    for thread in threads:
+                        thread.join()
+                    
+                    yield f"data: {json.dumps({'progress': 80, 'message': 'Todos os modelos responderam. Formatando saída...'})}\n\n"
 
-                            if key in results:
-                                html_content = markdown2.markdown(results[key], extras=["fenced-code-blocks", "tables"])
-                                yield f"data: {json.dumps({'progress': int((len(results)/len(threads))*100), 'message': f'Modelo {key.upper()} concluiu.', 'partial_result': {'id': f'{key}-output', 'content': html_content}})}\n\n"
-                                threads.pop(i) # Remove para não processar de novo
-                                completed_threads += 1
-                        time.sleep(1)
+                    # 3. Envia todos os resultados de uma vez, agora que estão prontos
+                    grok_html = markdown2.markdown(results.get('grok', 'Falha ao obter resposta.'), extras=["fenced-code-blocks", "tables"])
+                    yield f"data: {json.dumps({'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
+                    
+                    sonnet_html = markdown2.markdown(results.get('sonnet', 'Falha ao obter resposta.'), extras=["fenced-code-blocks", "tables"])
+                    yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': sonnet_html}})}\n\n"
+
+                    gemini_html = markdown2.markdown(results.get('gemini', 'Falha ao obter resposta.'), extras=["fenced-code-blocks", "tables"])
+                    yield f"data: {json.dumps({'partial_result': {'id': 'gemini-output', 'content': gemini_html}})}\n\n"
                     
                     yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento Atômico concluído!', 'done': True, 'mode': 'atomic'})}\n\n"
 
                 else:
                     # --- LÓGICA HIERÁRQUICA (SEQUENCIAL) ---
-                    # (Mesma lógica de antes, com nomes de prompts atualizados)
                     yield f"data: {json.dumps({'progress': 15, 'message': 'O GROK está processando sua solicitação com os arquivos...'})}\n\n"
                     prompt_grok = PromptTemplate(template=PROMPT_HIERARQUICO_GROK, input_variables=["solicitacao_usuario", "rag_context"])
                     chain_grok = LLMChain(llm=grok_llm, prompt=prompt_grok)
@@ -134,19 +138,16 @@ def process():
 
     return Response(generate_stream(mode, form_data, temp_file_paths), mimetype='text/event-stream')
 
-# --- NOVA ROTA PARA O MERGE ---
+# --- ROTA PARA O MERGE ---
 @app.route('/merge', methods=['POST'])
 def merge():
     data = request.get_json()
     try:
-        # Cria o prompt e a chain para o merge
         prompt_merge = PromptTemplate(template=PROMPT_ATOMICO_MERGE, input_variables=["solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
         
-        # O merge será feito pelo Claude Sonnet com limite de tokens alto
-        claude_with_max_tokens = claude_llm.bind(max_tokens=8000)
+        claude_with_max_tokens = claude_llm.bind(max_tokens=12000)
         chain_merge = LLMChain(llm=claude_with_max_tokens, prompt=prompt_merge)
 
-        # Invoca a chain com os dados recebidos
         resposta_merge = chain_merge.invoke({
             "solicitacao_usuario": data.get('solicitacao_usuario'),
             "texto_para_analise_grok": data.get('grok_text'),
@@ -157,7 +158,6 @@ def merge():
         if not resposta_merge or not resposta_merge.strip():
             raise ValueError("Falha no serviço de Merge (Claude Sonnet): Sem resposta.")
         
-        # Retorna o resultado como HTML
         merge_html = markdown2.markdown(resposta_merge, extras=["fenced-code-blocks", "tables"])
         return jsonify({"success": True, "content": merge_html})
 
