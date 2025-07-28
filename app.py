@@ -10,6 +10,7 @@ import concurrent.futures
 from html import escape, unescape
 import re
 from markdown_it import MarkdownIt
+from markdown2 import markdown as markdown2_render
 
 # Importações do LangChain
 from langchain.prompts import PromptTemplate
@@ -35,16 +36,40 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 # Instancia o conversor de Markdown
 md = MarkdownIt()
 
+# [ADICIONADO] Função para renderização com fallback: tenta MarkdownIt, depois markdown2
+
+def render_markdown_cascata(texto: str) -> str:
+    try:
+        html_1 = md.render(texto)
+        if not is_html_empty(html_1):
+            return html_1
+    except Exception as e:
+        print(f"MarkdownIt falhou: {e}")
+
+    try:
+        html_2 = markdown2_render(texto)
+        if not is_html_empty(html_2):
+            return html_2
+    except Exception as e:
+        print(f"markdown2 falhou: {e}")
+
+    return f"<pre>{escape(texto)}</pre>"
+
 def is_html_empty(html: str) -> bool:
     """
     Verifica de forma robusta se uma string HTML não contém texto visível,
-    lidando com entidades HTML.
+    lidando com entidades HTML e múltiplos tipos de espaços em branco.
     """
     if not html:
         return True
+    # 1. Remove todas as tags HTML
     text_only = re.sub('<[^<]+?>', '', html)
+    # 2. Decodifica entidades HTML (ex: &nbsp; para ' ')
     decoded_text = unescape(text_only)
-    return not decoded_text.strip()
+    # 3. Substitui qualquer sequência de caracteres de espaço em branco por um único espaço
+    normalized_space = re.sub(r'\s+', ' ', decoded_text)
+    # 4. Verifica se o texto restante (após remover espaços nas pontas) está de fato vazio
+    return not normalized_space.strip()
 
 @app.route('/')
 def index():
@@ -137,21 +162,21 @@ def process():
                     
                     grok_text = results.get('grok', '')
                     print(f"--- Resposta Bruta do GROK (Atômico) ---\n{grok_text}\n--------------------------------------")
-                    grok_html = md.render(grok_text)
+                    grok_html = render_markdown_cascata(grok_text)
                     if is_html_empty(grok_html):
                         grok_html = f"<pre>{escape(grok_text)}</pre>"
                     yield f"data: {json.dumps({'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
 
                     sonnet_text = results.get('sonnet', '')
                     print(f"--- Resposta Bruta do Sonnet (Atômico) ---\n{sonnet_text}\n----------------------------------------")
-                    sonnet_html = md.render(sonnet_text)
+                    sonnet_html = render_markdown_cascata(sonnet_text)
                     if is_html_empty(sonnet_html):
                         sonnet_html = f"<pre>{escape(sonnet_text)}</pre>"
                     yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': sonnet_html}})}\n\n"
 
                     gemini_text = results.get('gemini', '')
                     print(f"--- Resposta Bruta do Gemini (Atômico) ---\n{gemini_text}\n----------------------------------------")
-                    gemini_html = md.render(gemini_text)
+                    gemini_html = render_markdown_cascata(gemini_text)
                     if is_html_empty(gemini_html):
                         gemini_html = f"<pre>{escape(gemini_text)}</pre>"
                     yield f"data: {json.dumps({'partial_result': {'id': 'gemini-output', 'content': gemini_html}})}\n\n"
@@ -170,7 +195,7 @@ def process():
                         return
                     
                     print(f"--- Resposta Bruta do GROK (Hierárquico) ---\n{resposta_grok}\n------------------------------------------")
-                    grok_html = md.render(resposta_grok)
+                    grok_html = render_markdown_cascata(resposta_grok)
                     if is_html_empty(grok_html):
                         grok_html = f"<pre>{escape(resposta_grok)}</pre>"
                     yield f"data: {json.dumps({'progress': 33, 'message': 'Claude Sonnet está processando...', 'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
@@ -185,7 +210,7 @@ def process():
                         return
 
                     print(f"--- Resposta Bruta do Sonnet (Hierárquico) ---\n{resposta_sonnet}\n--------------------------------------------")
-                    sonnet_html = md.render(resposta_sonnet)
+                    sonnet_html = render_markdown_cascata(resposta_sonnet)
                     if is_html_empty(sonnet_html):
                         sonnet_html = f"<pre>{escape(resposta_sonnet)}</pre>"
                     yield f"data: {json.dumps({'progress': 66, 'message': 'Gemini está processando...', 'partial_result': {'id': 'sonnet-output', 'content': sonnet_html}})}\n\n"
@@ -199,7 +224,7 @@ def process():
                         return
 
                     print(f"--- Resposta Bruta do Gemini (Hierárquico) ---\n{resposta_gemini}\n--------------------------------------------")
-                    gemini_html = md.render(resposta_gemini)
+                    gemini_html = render_markdown_cascata(resposta_gemini)
                     if is_html_empty(gemini_html):
                         gemini_html = f"<pre>{escape(gemini_html)}</pre>"
                     yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento concluído!', 'partial_result': {'id': 'gemini-output', 'content': gemini_html}, 'done': True, 'mode': 'hierarchical'})}\n\n"
@@ -242,7 +267,7 @@ def merge():
             print(f"--- Resposta Bruta do Merge (GROK) ---\n{resposta_merge}\n------------------------------------")
             word_count = len(resposta_merge.split())
             
-            merge_html = md.render(resposta_merge)
+            merge_html = render_markdown_cascata(resposta_merge)
             if is_html_empty(merge_html):
                 merge_html = f"<pre>{escape(resposta_merge)}</pre>"
             
