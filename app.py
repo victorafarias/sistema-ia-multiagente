@@ -126,7 +126,7 @@ def process():
                     yield f"data: {json.dumps({'progress': 33, 'message': 'Agora, o Claude Sonnet está aprofundando o texto...', 'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
                     
                     prompt_sonnet = PromptTemplate(template=PROMPT_HIERARQUICO_SONNET, input_variables=["solicitacao_usuario", "texto_para_analise"])
-                    claude_with_max_tokens = claude_llm.bind(max_tokens=8000)
+                    claude_with_max_tokens = claude_llm.bind(max_tokens=20000)
                     chain_sonnet = LLMChain(llm=claude_with_max_tokens, prompt=prompt_sonnet)
                     resposta_sonnet = chain_sonnet.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_grok})['text']
                     if not resposta_sonnet or not resposta_sonnet.strip(): raise ValueError("Falha no serviço Claude Sonnet: Sem resposta.")
