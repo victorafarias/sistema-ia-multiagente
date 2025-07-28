@@ -17,19 +17,19 @@ grok_llm = GrokChatModel(
     api_key=os.getenv("X_API_KEY"),
     model=os.getenv("GROK_MODEL_ID"),
     base_url=os.getenv("X_API_BASE_URL"),
-    client_kwargs={"timeout": 900}
+    timeout=900
 )
 
 # Claude Sonnet
 claude_llm = ChatAnthropic(
     api_key=os.getenv("ANTHROPIC_API_KEY"),
     model_name=os.getenv("CLAUDE_MODEL_ID"),
-    client_kwargs={"timeout": 900}
+    timeout=900
 )
 
 # Gemini
 gemini_llm = ChatGoogleGenerativeAI(
     google_api_key=os.getenv("GOOGLE_API_KEY"),
     model=os.getenv("GEMINI_MODEL_ID"),
-    client_kwargs={"timeout": 900}
+    timeout=900
 )
