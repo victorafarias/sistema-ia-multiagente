@@ -36,11 +36,18 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 md = MarkdownIt()
 
 def is_html_empty(html: str) -> bool:
-    """Verifica se uma string HTML não contém texto visível."""
+    """
+    Verifica de forma robusta se uma string HTML não contém texto visível,
+    lidando com entidades HTML.
+    """
     if not html:
         return True
+    # 1. Remove todas as tags HTML
     text_only = re.sub('<[^<]+?>', '', html)
-    return not text_only.strip()
+    # 2. Decodifica entidades HTML (ex: &nbsp; para ' ')
+    decoded_text = unescape(text_only)
+    # 3. Verifica se o texto restante está de fato vazio
+    return not decoded_text.strip()
 
 @app.route('/')
 def index():
