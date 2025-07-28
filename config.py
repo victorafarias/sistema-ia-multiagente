@@ -51,55 +51,122 @@ PROMPT_HIERARQUICO_GROK = """
 """
 
 PROMPT_HIERARQUICO_SONNET = """
-Com base na solicitação original do usuário e no texto gerado pelo primeiro especialista, sua tarefa é analisar criticamente o texto e aprimorá-lo. Não faça reduções e nem resumos. Se conseguir aprofundar e detalhar melhor o texto, adicionar novas referência de novos autores, faça. Se não conseguir, não faça nada.
-
-**Solicitação Original do Usuário:**
----
-{solicitacao_usuario}
----
-
-**Texto Gerado para Análise:**
----
-{texto_para_analise}
----
-
-**Suas Instruções:**
-1.  **Valide se o texto atingiu a quantidade de caracteres mínimas de 24000 e máxima de 30000 caracteres**.
-2.  **Analise o texto:** Verifique a coesão, coerência e profundidade dos argumentos.
-3.  **Aprofunde e Detalhe:** Identifique pontos que podem ser mais explorados. Adicione detalhes, exemplos e nuances que enriqueçam o conteúdo original.
-4.  **Faça Correções:** Corrija eventuais imprecisões conceituais ou argumentativas.
-5.  **Não Resuma ou Reduza:** Seu objetivo é expandir e aprofundar, nunca encurtar o texto. O resultado final deve ser uma versão mais completa e robusta do que a original.
-6.  **Mantenha o Estilo:** Respeite o estilo de linguagem e o tom do texto original.
-7.  **Evite usar um estilo de escrita muito característico de textos gerados com IA, como por exemplo: "Não é mera..., mas é...". Coisas assim. Seja mais direto.**
-8.  **Verificar se todo o texto, incluindo citações, estão na lingua Português do Brasil. Traduza as que não estiverem.**
-
-Reescreva o texto completo, incorporando suas melhorias, detalhamentos e correções.
+<tarefa>
+    <objetivo>Analisar criticamente e aprimorar texto gerado por primeiro especialista</objetivo>
+    
+    <entrada>
+        <solicitacao_usuario>{solicitacao_usuario}</solicitacao_usuario>
+        <texto_para_analise>{texto_para_analise}</texto_para_analise>
+    </entrada>
+    
+    <tamanhoDoTexto>
+        <caracteres>
+            <minimo>24000</minimo>
+            <maximo>30000</maximo>
+        </caracteres>
+    </tamanhoDoTexto>
+    
+    <instrucoes>
+        <analise>
+            <verificar>coesão do texto</verificar>
+            <verificar>coerência dos argumentos</verificar>
+            <verificar>profundidade da análise</verificar>
+        </analise>
+        
+        <aprimoramento>
+            <acao>identificar pontos para aprofundamento</acao>
+            <acao>adicionar detalhes relevantes</acao>
+            <acao>incluir exemplos esclarecedores</acao>
+            <acao>incorporar nuances ao conteúdo</acao>
+            <acao>adicionar referências de novos autores quando possível</acao>
+        </aprimoramento>
+        
+        <correcoes>
+            <acao>corrigir imprecisões conceituais</acao>
+            <acao>corrigir problemas argumentativos</acao>
+        </correcoes>
+    </instrucoes>
+    
+    <restricoes>
+        <proibido>fazer reduções do texto</proibido>
+        <proibido>fazer resumos</proibido>
+        <proibido>encurtar o conteúdo original</proibido>
+        <proibido>usar expressões características de IA como "Não é mera..., mas é..."</proibido>
+    </restricoes>
+    
+    <requisitos>
+        <manter>estilo de linguagem original</manter>
+        <manter>tom do texto original</manter>
+        <garantir>escrita direta e natural</garantir>
+        <garantir>texto em Português do Brasil</garantir>
+        <traduzir>citações em outros idiomas</traduzir>
+    </requisitos>
+    
+    <resultado_esperado>
+        Texto completo reescrito com melhorias, detalhamentos e correções incorporados, sendo uma versão mais completa e robusta que a original.
+    </resultadoesperado>
+</tarefa>
 """
 
 PROMPT_HIERARQUICO_GEMINI = """
-Você é o revisor final. Sua função é polir e aperfeiçoar o texto que já passou por uma primeira rodada de escrita e uma segunda de revisão e aprofundamento. Não faça reduções e nem resumos. Se conseguir aprofundar e detalhar melhor o texto, adicionar novas referência de novos autores, faça. Se não conseguir, não faça nada.
-
-**Solicitação Original do Usuário:**
----
-{solicitacao_usuario}
----
-
-**Texto Revisado para Análise Final:**
----
-{texto_para_analise}
----
-
-**Suas Instruções:**
-1.  **Análise Crítica Final:** Leia o texto atentamente, buscando a máxima qualidade, clareza e profundidade.
-2.  **Valide se o texto atingiu a quantidade de caracteres mínimas de 24000 e máxima de 30000 caracteres**.
-3.  **Correções e Complementos Finais:** Adicione os toques finais. Melhore a fluidez entre os parágrafos, enriqueça o vocabulário e adicione insights que possam ter sido omitidos.
-4.  **Não Resuma ou Reduza:** Assim como o revisor anterior, seu papel é adicionar valor e profundidade, não remover conteúdo.
-5.  **Garantia de Qualidade:** Assegure que o texto final atende a todos os requisitos da solicitação original do usuário de forma exemplar.
-6.  **Exiba na resposta apenas o texto revisado, sem nenhuma outra mensagem para o usuário.**
-7.  **Evite usar um estilo de escrita muito característico de textos gerados com IA, como por exemplo: "Não é mera..., mas é...". Coisas assim. Seja mais direto.**
-8.  **Verificar se todo o texto, incluindo citações, estão na lingua Português do Brasil. Traduza as que não estiverem.**
-
-Reescreva o texto completo com suas melhorias finais. O texto deve estar impecável e pronto para publicação.
+<tarefa>
+    <objetivo>Você é o revisor final. Sua função é polir e aperfeiçoar o texto que já passou por uma primeira rodada de escrita e uma segunda de revisão e aprofundamento. Não faça reduções e nem resumos. Se conseguir aprofundar e detalhar melhor o texto, adicionar novas referência de novos autores, faça. Se não conseguir, não faça nada.</objetivo>
+    
+    <entrada>
+        <solicitacao_usuario>{solicitacao_usuario}</solicitacao_usuario>
+        <texto_para_analise>{texto_para_analise}</texto_para_analise>
+    </entrada>
+    
+    <tamanhoDoTexto>
+        <caracteres>
+            <minimo>24000</minimo>
+            <maximo>30000</maximo>
+        </caracteres>
+    </tamanhoDoTexto>
+    
+    <instrucoes>
+        <instrucao>
+        <step>Análise Crítica Final:</step>
+        <description>Leia o texto atentamente, buscando a máxima qualidade, clareza e profundidade.</description>
+        </instrucao>
+        <instrucao>
+        <step>Validação de Caracteres:</step>
+        <description>Verifique se o texto atingiu a quantidade de caracteres mínima de 24000 e máxima de 30000 caracteres.</description>
+        </instrucao>
+        <instrucao>
+        <step>Correções e Complementos Finais:</step>
+        <description>Adicione os toques finais. Melhore a fluidez entre os parágrafos, enriqueça o vocabulário e adicione insights que possam ter sido omitidos. Aprofunde e detalhe o texto, adicionando novas referências de autores, se pertinente.</description>
+        </instrucao>
+        <instrucao>
+        <step>Garantia de Qualidade:</step>
+        <description>Assegure que o texto final atende a todos os requisitos da solicitação original do usuário de forma exemplar.</description>
+        </instrucao>
+        
+        <correcoes>
+            <acao>corrigir imprecisões conceituais</acao>
+            <acao>corrigir problemas argumentativos</acao>
+        </correcoes>
+    </instrucoes>
+    
+    <restricoes>
+        <proibido>fazer reduções do texto</proibido>
+        <proibido>fazer resumos</proibido>
+        <proibido>encurtar o conteúdo original</proibido>
+        <proibido>usar expressões características de IA como "Não é mera..., mas é..."</proibido>
+    </restricoes>
+    
+    <requisitos>
+        <manter>estilo de linguagem original</manter>
+        <manter>tom do texto original</manter>
+        <garantir>escrita direta e natural</garantir>
+        <garantir>texto em Português do Brasil</garantir>
+        <traduzir>citações em outros idiomas</traduzir>
+    </requisitos>
+    
+    <resultado_esperado>
+        Texto completo com melhorias, detalhamentos e correções incorporados, sendo uma versão mais completa e robusta que a original.
+    </resultadoesperado>
+</tarefa>
 """
 
 
