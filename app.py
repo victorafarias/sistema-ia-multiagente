@@ -7,13 +7,13 @@ import os
 import uuid
 import threading
 import concurrent.futures
-from html import escape
+from html import escape, unescape
 import re
-from markdown_it import MarkdownIt # ✅ NOVA IMPORTAÇÃO
+from markdown_it import MarkdownIt
 
 # Importações do LangChain
 from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
+from langchain_core.output_parsers import StrOutputParser
 
 # Importa os LLMs
 from llms import claude_llm, grok_llm, gemini_llm
@@ -32,7 +32,7 @@ if not os.path.exists('uploads'):
 
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
-# ✅ Instancia o novo conversor de Markdown
+# Instancia o conversor de Markdown
 md = MarkdownIt()
 
 def is_html_empty(html: str) -> bool:
@@ -42,11 +42,8 @@ def is_html_empty(html: str) -> bool:
     """
     if not html:
         return True
-    # 1. Remove todas as tags do HTML
     text_only = re.sub('<[^<]+?>', '', html)
-    # 2. Decodifica entidades HTML (ex: &nbsp; para ' ')
     decoded_text = unescape(text_only)
-    # 3. Verifica se o texto restante está de fato vazio
     return not decoded_text.strip()
 
 @app.route('/')
@@ -91,6 +88,8 @@ def process():
                 yield f"data: {json.dumps({'progress': 0, 'message': 'Processando arquivos e extraindo contexto...'})}\n\n"
                 rag_context = get_relevant_context(file_paths, solicitacao_usuario)
                 
+                output_parser = StrOutputParser()
+
                 if processing_mode == 'atomic':
                     # --- LÓGICA ATÔMICA (PARALELA) ---
                     results = {}
@@ -98,7 +97,7 @@ def process():
                     
                     def run_chain_with_timeout(chain, inputs, key, timeout=300):
                         def task():
-                            return chain.invoke(inputs)['text']
+                            return chain.invoke(inputs)
                         
                         with concurrent.futures.ThreadPoolExecutor() as executor:
                             future = executor.submit(task)
@@ -120,7 +119,7 @@ def process():
                     yield f"data: {json.dumps({'progress': 15, 'message': 'Iniciando processamento paralelo...'})}\n\n"
                     
                     for name, llm in models.items():
-                        chain = LLMChain(llm=llm, prompt=prompt)
+                        chain = prompt | llm | output_parser
                         thread = threading.Thread(target=run_chain_with_timeout, args=(chain, {"solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context}, name))
                         threads.append(thread)
                         thread.start()
@@ -163,8 +162,8 @@ def process():
                     # --- LÓGICA HIERÁRQUICA (SEQUENCIAL) ---
                     yield f"data: {json.dumps({'progress': 15, 'message': 'O GROK está processando sua solicitação...'})}\n\n"
                     prompt_grok = PromptTemplate(template=PROMPT_HIERARQUICO_GROK, input_variables=["solicitacao_usuario", "rag_context"])
-                    chain_grok = LLMChain(llm=grok_llm, prompt=prompt_grok)
-                    resposta_grok = chain_grok.invoke({"solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context})['text']
+                    chain_grok = prompt_grok | grok_llm | output_parser
+                    resposta_grok = chain_grok.invoke({"solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context})
                     
                     if not resposta_grok or not resposta_grok.strip():
                         yield f"data: {json.dumps({'error': 'Falha no serviço GROK: Sem resposta.'})}\n\n"
@@ -178,8 +177,8 @@ def process():
                     
                     prompt_sonnet = PromptTemplate(template=PROMPT_HIERARQUICO_SONNET, input_variables=["solicitacao_usuario", "texto_para_analise"])
                     claude_with_max_tokens = claude_llm.bind(max_tokens=20000)
-                    chain_sonnet = LLMChain(llm=claude_with_max_tokens, prompt=prompt_sonnet)
-                    resposta_sonnet = chain_sonnet.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_grok})['text']
+                    chain_sonnet = prompt_sonnet | claude_with_max_tokens | output_parser
+                    resposta_sonnet = chain_sonnet.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_grok})
                     
                     if not resposta_sonnet or not resposta_sonnet.strip():
                         yield f"data: {json.dumps({'error': 'Falha no serviço Claude Sonnet: Sem resposta.'})}\n\n"
@@ -192,8 +191,8 @@ def process():
                     yield f"data: {json.dumps({'progress': 66, 'message': 'Gemini está processando...', 'partial_result': {'id': 'sonnet-output', 'content': sonnet_html}})}\n\n"
                     
                     prompt_gemini = PromptTemplate(template=PROMPT_HIERARQUICO_GEMINI, input_variables=["solicitacao_usuario", "texto_para_analise"])
-                    chain_gemini = LLMChain(llm=gemini_llm, prompt=prompt_gemini)
-                    resposta_gemini = chain_gemini.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_sonnet})['text']
+                    chain_gemini = prompt_gemini | gemini_llm | output_parser
+                    resposta_gemini = chain_gemini.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_sonnet})
                     
                     if not resposta_gemini or not resposta_gemini.strip():
                         yield f"data: {json.dumps({'error': 'Falha no serviço Gemini: Sem resposta.'})}\n\n"
@@ -221,10 +220,11 @@ def merge():
         try:
             yield f"data: {json.dumps({'progress': 0, 'message': 'Iniciando o processo de merge...'})}\n\n"
             
+            output_parser = StrOutputParser()
             prompt_merge = PromptTemplate(template=PROMPT_ATOMICO_MERGE, input_variables=["solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
             
-            grok_with_max_tokens = grok_llm.bind(max_tokens=100000)
-            chain_merge = LLMChain(llm=grok_with_max_tokens, prompt=prompt_merge)
+            grok_with_max_tokens = grok_llm.bind(max_tokens=20000)
+            chain_merge = prompt_merge | grok_with_max_tokens | output_parser
 
             yield f"data: {json.dumps({'progress': 50, 'message': 'Enviando textos para o GROK para consolidação...'})}\n\n"
 
@@ -233,7 +233,7 @@ def merge():
                 "texto_para_analise_grok": data.get('grok_text'),
                 "texto_para_analise_sonnet": data.get('sonnet_text'),
                 "texto_para_analise_gemini": data.get('gemini_text')
-            })['text']
+            })
             
             if not resposta_merge or not resposta_merge.strip():
                 yield f"data: {json.dumps({'error': 'Falha no serviço de Merge (GROK): Sem resposta.'})}\n\n"
