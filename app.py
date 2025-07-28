@@ -89,13 +89,12 @@ def process():
                             future = executor.submit(task)
                             try:
                                 result = future.result(timeout=timeout)
-                                # Validação de resposta vazia
                                 if not result or not result.strip():
                                     results[key] = "Error:EmptyResponse"
                                 else:
                                     results[key] = result
                             except concurrent.futures.TimeoutError:
-                                results[key] = f"Erro ao processar {key.upper()}: Tempo limite excedido (Timeout)."
+                                results[key] = f"Erro ao processar {key.upper()}: Tempo limite excedido."
                             except Exception as e:
                                 results[key] = f"Erro ao processar {key.upper()}: {e}"
 
@@ -112,20 +111,44 @@ def process():
                     for thread in threads:
                         thread.join()
                     
-                    # Verifica se alguma thread falhou ou retornou vazio
                     for key, result in results.items():
                         if result == "Error:EmptyResponse" or "Erro ao processar" in result:
                             error_msg = result if "Erro ao processar" in result else f"Falha no serviço {key.upper()}: Sem resposta."
                             yield f"data: {json.dumps({'error': error_msg})}\n\n"
-                            return # Interrompe todo o processo
+                            return
 
-                    yield f"data: {json.dumps({'progress': 80, 'message': 'Todos os modelos responderam. Formatando saída...'})}\n\n"
+                    yield f"data: {json.dumps({'progress': 80, 'message': 'Todos os modelos responderam. Formatando saídas...'})}\n\n"
                     
-                    grok_html = markdown2.markdown(results.get('grok', ''), extras=["fenced-code-blocks", "tables"])
+                    # ✅ VALIDAÇÃO E LOGS PARA O MODO ATÔMICO
+                    
+                    # GROK
+                    grok_text = results.get('grok', '')
+                    print("--- Resposta Bruta do GROK (Atômico) ---")
+                    print(grok_text)
+                    print("---------------------------------------")
+                    grok_html = markdown2.markdown(grok_text, extras=["fenced-code-blocks", "tables"])
+                    if not grok_html or not grok_html.strip():
+                        grok_html = f"<pre>{grok_text}</pre>"
                     yield f"data: {json.dumps({'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
-                    sonnet_html = markdown2.markdown(results.get('sonnet', ''), extras=["fenced-code-blocks", "tables"])
+
+                    # SONNET
+                    sonnet_text = results.get('sonnet', '')
+                    print("--- Resposta Bruta do Sonnet (Atômico) ---")
+                    print(sonnet_text)
+                    print("-----------------------------------------")
+                    sonnet_html = markdown2.markdown(sonnet_text, extras=["fenced-code-blocks", "tables"])
+                    if not sonnet_html or not sonnet_html.strip():
+                        sonnet_html = f"<pre>{sonnet_text}</pre>"
                     yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': sonnet_html}})}\n\n"
-                    gemini_html = markdown2.markdown(results.get('gemini', ''), extras=["fenced-code-blocks", "tables"])
+
+                    # GEMINI
+                    gemini_text = results.get('gemini', '')
+                    print("--- Resposta Bruta do Gemini (Atômico) ---")
+                    print(gemini_text)
+                    print("-----------------------------------------")
+                    gemini_html = markdown2.markdown(gemini_text, extras=["fenced-code-blocks", "tables"])
+                    if not gemini_html or not gemini_html.strip():
+                        gemini_html = f"<pre>{gemini_text}</pre>"
                     yield f"data: {json.dumps({'partial_result': {'id': 'gemini-output', 'content': gemini_html}})}\n\n"
                     
                     yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento Atômico concluído!', 'done': True, 'mode': 'atomic'})}\n\n"
@@ -137,12 +160,17 @@ def process():
                     chain_grok = LLMChain(llm=grok_llm, prompt=prompt_grok)
                     resposta_grok = chain_grok.invoke({"solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context})['text']
                     
-                    # ✅ VALIDAÇÃO APRIMORADA
                     if not resposta_grok or not resposta_grok.strip():
                         yield f"data: {json.dumps({'error': 'Falha no serviço GROK: Sem resposta. O processo foi interrompido.'})}\n\n"
                         return
-                        
+                    
+                    print("--- Resposta Bruta do GROK (Hierárquico) ---")
+                    print(resposta_grok)
+                    print("-------------------------------------------")
                     grok_html = markdown2.markdown(resposta_grok, extras=["fenced-code-blocks", "tables"])
+                    if not grok_html or not grok_html.strip():
+                        grok_html = f"<pre>{resposta_grok}</pre>"
+
                     yield f"data: {json.dumps({'progress': 33, 'message': 'Agora, o Claude Sonnet está aprofundando o texto...', 'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
                     
                     prompt_sonnet = PromptTemplate(template=PROMPT_HIERARQUICO_SONNET, input_variables=["solicitacao_usuario", "texto_para_analise"])
@@ -150,24 +178,34 @@ def process():
                     chain_sonnet = LLMChain(llm=claude_with_max_tokens, prompt=prompt_sonnet)
                     resposta_sonnet = chain_sonnet.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_grok})['text']
                     
-                    # ✅ VALIDAÇÃO APRIMORADA
                     if not resposta_sonnet or not resposta_sonnet.strip():
                         yield f"data: {json.dumps({'error': 'Falha no serviço Claude Sonnet: Sem resposta. O processo foi interrompido.'})}\n\n"
                         return
 
+                    print("--- Resposta Bruta do Sonnet (Hierárquico) ---")
+                    print(resposta_sonnet)
+                    print("---------------------------------------------")
                     sonnet_html = markdown2.markdown(resposta_sonnet, extras=["fenced-code-blocks", "tables"])
-                    yield f"data: {json.dumps({'progress': 66, 'message': 'Revisão final com o Gemini...'})}\n\n"
+                    if not sonnet_html or not sonnet_html.strip():
+                        sonnet_html = f"<pre>{resposta_sonnet}</pre>"
+
+                    yield f"data: {json.dumps({'progress': 66, 'message': 'Revisão final com o Gemini...', 'partial_result': {'id': 'sonnet-output', 'content': sonnet_html}})}\n\n"
                     
                     prompt_gemini = PromptTemplate(template=PROMPT_HIERARQUICO_GEMINI, input_variables=["solicitacao_usuario", "texto_para_analise"])
                     chain_gemini = LLMChain(llm=gemini_llm, prompt=prompt_gemini)
                     resposta_gemini = chain_gemini.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_sonnet})['text']
                     
-                    # ✅ VALIDAÇÃO APRIMORADA
                     if not resposta_gemini or not resposta_gemini.strip():
                         yield f"data: {json.dumps({'error': 'Falha no serviço Gemini: Sem resposta. O processo foi interrompido.'})}\n\n"
                         return
 
+                    print("--- Resposta Bruta do Gemini (Hierárquico) ---")
+                    print(resposta_gemini)
+                    print("---------------------------------------------")
                     gemini_html = markdown2.markdown(resposta_gemini, extras=["fenced-code-blocks", "tables"])
+                    if not gemini_html or not gemini_html.strip():
+                        gemini_html = f"<pre>{resposta_gemini}</pre>"
+
                     yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento concluído!', 'partial_result': {'id': 'gemini-output', 'content': gemini_html}, 'done': True, 'mode': 'hierarchical'})}\n\n"
 
             except Exception as e:
@@ -200,7 +238,6 @@ def merge():
                 "texto_para_analise_gemini": data.get('gemini_text')
             })['text']
             
-            # ✅ VALIDAÇÃO APRIMORADA
             if not resposta_merge or not resposta_merge.strip():
                 yield f"data: {json.dumps({'error': 'Falha no serviço de Merge (GROK): Sem resposta.'})}\n\n"
                 return
