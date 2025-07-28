@@ -188,7 +188,10 @@ def merge():
             yield f"data: {json.dumps({'progress': 0, 'message': 'Iniciando o processo de merge...'})}\n\n"
             
             prompt_merge = PromptTemplate(template=PROMPT_ATOMICO_MERGE, input_variables=["solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
-            chain_merge = LLMChain(llm=grok_llm, prompt=prompt_merge)
+            
+            # Cria uma instância do GROK com limite de tokens aumentado para o merge
+            grok_with_max_tokens = grok_llm.bind(max_tokens=100000)
+            chain_merge = LLMChain(llm=grok_with_max_tokens, prompt=prompt_merge)
 
             yield f"data: {json.dumps({'progress': 50, 'message': 'Enviando textos para o GROK para consolidação...'})}\n\n"
 

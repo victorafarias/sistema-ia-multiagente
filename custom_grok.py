@@ -38,6 +38,10 @@ class GrokChatModel(BaseChatModel):
             "temperature": 0.7
         }
 
+         # Adiciona max_tokens ao payload se for fornecido
+        if "max_tokens" in kwargs:
+            payload["max_tokens"] = kwargs["max_tokens"]       
+
         try:
             response = requests.post(
                 self.base_url,

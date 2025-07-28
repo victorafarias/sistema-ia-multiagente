@@ -182,9 +182,10 @@ PROMPT_ATOMICO_MERGE = """
       Analise e escolha a melhor estrutura de seções entre os 3 textos e aplique no texto consolidado. A melhor estrutura de seções é aquela que melhor entendeu o objetivo da solicitação do usuário e que mais conseguir se aprofundar na abordagem do tema.
     </structure>
 
-    <word_count>
-      Valide se o texto atingiu a quantidade de mínima de 24000 caracteres e máxima de 30000 caracteres.
-    </word_count>
+    <caracters_count>
+        <minimum>24000</minimum>
+        <maximum>30000</maximum>
+    </caracters_count>
 
     <analysis>
       Verifique a coesão, coerência e profundidade dos argumentos.
