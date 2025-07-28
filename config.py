@@ -9,7 +9,10 @@ PROMPT_HIERARQUICO_GROK = """
   </role>
 
   <requirements>
-    <word_count>Entre 4000 e 5000 palavras</word_count>
+    <caracters_count>
+        <minimum>24000</minimum>
+        <maximum>30000</maximum>
+    </caracters_count>
     <language>Português do Brasil</language>
     <paragraph_structure>Parágrafos curtos para facilitar a leitura</paragraph_structure>
     <language_style>
@@ -61,7 +64,7 @@ Com base na solicitação original do usuário e no texto gerado pelo primeiro e
 ---
 
 **Suas Instruções:**
-1.  **Valide se o texto atingiu a quantidade de palavras mínimas (4000 palavras) e máxima (5000 palavras)**.
+1.  **Valide se o texto atingiu a quantidade de caracteres mínimas de 24000 e máxima de 30000 caracteres**.
 2.  **Analise o texto:** Verifique a coesão, coerência e profundidade dos argumentos.
 3.  **Aprofunde e Detalhe:** Identifique pontos que podem ser mais explorados. Adicione detalhes, exemplos e nuances que enriqueçam o conteúdo original.
 4.  **Faça Correções:** Corrija eventuais imprecisões conceituais ou argumentativas.
@@ -88,7 +91,7 @@ Você é o revisor final. Sua função é polir e aperfeiçoar o texto que já p
 
 **Suas Instruções:**
 1.  **Análise Crítica Final:** Leia o texto atentamente, buscando a máxima qualidade, clareza e profundidade.
-2.  **Valide se o texto atingiu a quantidade de palavras mínimas (4000 palavras) e máxima (5000 palavras)**.
+2.  **Valide se o texto atingiu a quantidade de caracteres mínimas de 24000 e máxima de 30000 caracteres**.
 3.  **Correções e Complementos Finais:** Adicione os toques finais. Melhore a fluidez entre os parágrafos, enriqueça o vocabulário e adicione insights que possam ter sido omitidos.
 4.  **Não Resuma ou Reduza:** Assim como o revisor anterior, seu papel é adicionar valor e profundidade, não remover conteúdo.
 5.  **Garantia de Qualidade:** Assegure que o texto final atende a todos os requisitos da solicitação original do usuário de forma exemplar.
@@ -108,7 +111,10 @@ PROMPT_ATOMICO_INICIAL = """
     Você é um filósofo e teólogo católico, especialista em redigir textos profundos e detalhados sobre assuntos diversos da filosofia, teologia, política, antropologia, educação, psicologia etc.
   </role>
   <requirements>
-    <word_count>Entre 4000 e 5000 palavras</word_count>
+    <caracters_count>
+        <minimum>24000</minimum>
+        <maximum>30000</maximum>
+    </caracters_count>
     <language>Português do Brasil</language>
     <paragraph_structure>Parágrafos curtos para facilitar a leitura</paragraph_structure>
     <language_style>
@@ -144,38 +150,74 @@ PROMPT_ATOMICO_INICIAL = """
 """
 
 PROMPT_ATOMICO_MERGE = """
-Com base na solicitação original do usuário e nos textos-base fornecidos, sua tarefa é analisar criticamente os textos e elaborar uma versão consolidada, unindo o que há de melhor em cada um deles.
+<prompt>
+  <context>
+    Com base na solicitação original do usuário e nos textos-base fornecidos, sua tarefa é analisar criticamente os textos e elaborar uma versão consolidada, unindo o que há de melhor em cada um deles.
+  </context>
 
-**Solicitação Original do Usuário:**
----
-{solicitacao_usuario}
----
+  <inputs>
+    <user_request>
+      <title>Solicitação Original do Usuário:</title>
+      <content>{solicitacao_usuario}</content>
+    </user_request>
 
-**Texto Gerado pelo GROK:**
----
-{texto_para_analise_grok}
----
+    <text_grok>
+      <title>Texto Gerado pelo GROK:</title>
+      <content>{texto_para_analise_grok}</content>
+    </text_grok>
 
-**Texto Gerado pelo Sonnet:**
----
-{texto_para_analise_sonnet}
----
+    <text_sonnet>
+      <title>Texto Gerado pelo Sonnet:</title>
+      <content>{texto_para_analise_sonnet}</content>
+    </text_sonnet>
 
-**Texto Gerado pelo Gemini:**
----
-{texto_para_analise_gemini}
----
+    <text_gemini>
+      <title>Texto Gerado pelo Gemini:</title>
+      <content>{texto_para_analise_gemini}</content>
+    </text_gemini>
+  </inputs>
 
-**Suas Instruções:**
-- **Estrutura:** Analise e escolha a melhor estrutura de seções entre os 3 textos e aplique no texto consolidado. A melhor estrutura de seções é aquela que melhor entendeu o objetivo da solicitação do usuário e que mais conseguir se aprofundar na abordagem do tema.
-- **Valide se o texto atingiu a quantidade de palavras mínimas (4000 palavras) e máxima (5000 palavras)**.
-- **Analise o texto:** Verifique a coesão, coerência e profundidade dos argumentos.
-- **Consolidação:** Identifique os pontos fortes de cada texto e gere um texto final consolidado. Cuide para o que texto não fique redundante. Ou seja, voltando nos mesmos assuntos e conceitos.
-- **Faça Correções:** Corrija eventuais imprecisões conceituais ou argumentativas.
-- **Não Resuma ou Reduza o texto:** Seu objetivo é expandir e aprofundar, nunca encurtar o texto. O resultado final deve ser uma versão mais completa e robusta do que a original, e deve obedecer o mínimo de 4000 palavras.
-- **Mantenha o Estilo:** Respeite o estilo de linguagem e o tom do texto original.
-- **Evite usar um estilo de escrita muito característico de textos gerados com IA, como por exemplo: "Não é mera..., mas é...". Coisas assim. Seja mais direto.
-- **Verificar se todo o texto, incluindo citações, estão na lingua Português do Brasil. Traduza as que não estiverem.
+  <instructions>
+    <structure>
+      Analise e escolha a melhor estrutura de seções entre os 3 textos e aplique no texto consolidado. A melhor estrutura de seções é aquela que melhor entendeu o objetivo da solicitação do usuário e que mais conseguir se aprofundar na abordagem do tema.
+    </structure>
 
-Reescreva o texto completo, incorporando suas melhorias, detalhamentos e correções.
+    <word_count>
+      Valide se o texto atingiu a quantidade de mínima de 24000 caracteres e máxima de 30000 caracteres.
+    </word_count>
+
+    <analysis>
+      Verifique a coesão, coerência e profundidade dos argumentos.
+    </analysis>
+
+    <consolidation>
+      Identifique os pontos fortes de cada texto e gere um texto final consolidado. Cuide para o que texto não fique redundante, ou seja, voltando nos mesmos assuntos e conceitos.
+    </consolidation>
+
+    <corrections>
+      Corrija eventuais imprecisões conceituais ou argumentativas. Corrija eventuais citações a livros ou autores que não existem. Todos as obras e autores devem ser reais.
+    </corrections>
+
+    <expansion>
+      Não resuma ou reduza o texto: Seu objetivo é consolidar, expandir e aprofundar, nunca encurtar o texto. O resultado final deve ser uma versão mais completa e robusta do que os textos originais, e deve obedecer o mínimo de 24000 caracteres.
+    </expansion>
+
+    <style>
+      Mantenha o estilo: Respeite o estilo de linguagem e o tom do texto original.
+    </style>
+
+    <writing_style>
+      Evite usar um estilo de escrita muito característico de textos gerados com IA, como por exemplo: "Não é mera..., mas é...". Coisas assim. Seja mais direto.
+      Tente usar um estilo de escrita parecida com a de Gilbert K. Chesterton.
+    </writing_style>
+
+    <language>
+      Verificar se todo o texto, incluindo citações, estão na lingua Português do Brasil. Traduza as que não estiverem.
+    </language>
+  </instructions>
+
+  <output>
+    Texto consolidado, melhorado e corrigido.
+  </output>
+</prompt>
 """
