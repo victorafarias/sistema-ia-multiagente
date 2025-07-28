@@ -6,11 +6,11 @@
     <title>Sistema Multi-Agente de IA</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        /* Adicionando um estilo simples para o novo botão */
+        /* Estilos para o novo botão de conversão */
         .convert-btn {
             padding: 5px 10px;
             font-size: 12px;
-            background-color: #17a2b8; /* Uma cor diferente */
+            background-color: #17a2b8; /* Cor Ciano/Azul claro */
             color: white;
             border: none;
             border-radius: 4px;
@@ -20,6 +20,10 @@
         .convert-btn:hover {
             background-color: #138496;
         }
+        .convert-btn:disabled {
+            background-color: #5a6268;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -28,19 +32,24 @@
         <div class="loader-content">
             <div class="loader-spinner"></div>
             <p id="loader-message">Processando sua solicitação...</p>
-            <div class="progress-bar-container">
-                <div id="progress-bar" class="progress-bar"></div>
-            </div>
+            <div class="progress-bar-container"><div id="progress-bar" class="progress-bar"></div></div>
         </div>
     </div>
+
+    <button id="merge-btn" class="floating-merge-btn" style="display: none;">Processar Merge</button>
 
     <div class="container">
         <div class="header-container">
             <div>
                 <h1>Sistema Multi-Agente IA</h1>
-                <p>GROK ➔ Claude Sonnet ➔ Gemini</p>
+                <p id="flow-description">GROK ➔ Claude Sonnet ➔ Gemini</p>
             </div>
             <div class="controls-container">
+                <div class="mode-toggle" title="A versão 'Hierárquica' gerará um único no texto que passará por revisão em duas instâncias. Na versão 'Atômica', serão gerados 3 textos, um em cada modelo de IA; e depois um 4º texto será gerado fazendo um texto final consolidado dessas 3 versões.">
+                    <span>Hierárquico</span>
+                    <label class="switch"><input type="checkbox" id="processing-mode-switch"><span class="slider round"></span></label>
+                    <span>Atômico</span>
+                </div>
                 <div class="mode-toggle">
                     <span>Modo Real</span>
                     <label class="switch"><input type="checkbox" id="mode-switch"><span class="slider round"></span></label>
@@ -60,16 +69,17 @@
                 <button type="submit">Processar com IA</button>
             </form>
         </div>
-
         <div id="mock-form-container" style="display: none;">
             <form id="request-form-mock">
                 <label for="mock_text">Cole o texto de simulação aqui:</label>
-                <textarea name="mock_text" id="mock_text" rows="10" required>Este é um **texto** de `simulação`.
+                <textarea name="mock_text" id="mock_text" rows="10" required>### Título
+
+Este é um exemplo de texto **bruto** em Markdown.
 
 - Item 1
 - Item 2
 
-Use o botão "Converter para MD" para ver o resultado formatado.</textarea>
+Use o botão `Converter para MD` para ver a mágica.</textarea>
                 <button type="submit">Simular Resposta</button>
             </form>
         </div>
@@ -88,7 +98,7 @@ Use o botão "Converter para MD" para ver o resultado formatado.</textarea>
             <div class="result-column">
                 <div class="column-header">
                     <h2>Claude Sonnet</h2>
-                     <div>
+                    <div>
                         <button class="copy-btn" onclick="copyToClipboard('sonnet-output')">Copiar</button>
                         <button class="convert-btn" onclick="convertToMarkdown('sonnet-output')">Converter para MD</button>
                     </div>
@@ -106,9 +116,22 @@ Use o botão "Converter para MD" para ver o resultado formatado.</textarea>
                 <div class="output-box" id="gemini-output"></div>
             </div>
         </div>
+
+        <div id="final-result-container" style="display: none;">
+            <div class="column-header" style="border-radius: 8px 8px 0 0; background-color: #e9ecef;">
+                <h2 id="final-result-title">Texto Final</h2>
+                <div>
+                    <button class="copy-btn" onclick="copyToClipboard('final-output')">Copiar</button>
+                    <button class="convert-btn" onclick="convertToMarkdown('final-output')">Converter para MD</button>
+                </div>
+            </div>
+            <div class="output-box" id="final-output" style="background-color: #fafafa; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;"></div>
+        </div>
     </div>
 
     <script>
+        // --- Variáveis Globais ---
+        const processingModeSwitch = document.getElementById('processing-mode-switch');
         const modeSwitch = document.getElementById('mode-switch');
         const realContainer = document.getElementById('real-form-container');
         const mockContainer = document.getElementById('mock-form-container');
@@ -119,47 +142,41 @@ Use o botão "Converter para MD" para ver o resultado formatado.</textarea>
         const errorContainer = document.getElementById('error-box-container');
         const textarea = document.getElementById('solicitacao_usuario');
         const fileList = document.getElementById('file-list');
+        const mergeBtn = document.getElementById('merge-btn');
+        const finalResultContainer = document.getElementById('final-result-container');
+        const finalOutput = document.getElementById('final-output');
         let attachedFiles = [];
+        let originalUserQuery = "";
+        let rawTexts = {}; // NOVO: Objeto para guardar os textos brutos
 
-        // Armazenar o texto bruto original para reconversão ou cópia
-        let rawTexts = {};
-
+        // --- Lógica de UI ---
         modeSwitch.addEventListener('change', function() {
             realContainer.style.display = this.checked ? 'none' : 'block';
             mockContainer.style.display = this.checked ? 'block' : 'none';
         });
-
+        processingModeSwitch.addEventListener('change', function() {
+            document.getElementById('flow-description').textContent = this.checked ? "GROK | Claude Sonnet | Gemini (Paralelo)" : "GROK ➔ Claude Sonnet ➔ Gemini";
+        });
+        
+        // --- Lógica de Upload ---
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             textarea.addEventListener(eventName, preventDefaults, false);
             document.body.addEventListener(eventName, preventDefaults, false);
         });
-        ['dragenter', 'dragover'].forEach(eventName => {
-            textarea.addEventListener(eventName, () => textarea.classList.add('drag-over'), false);
-        });
-        ['dragleave', 'drop'].forEach(eventName => {
-            textarea.addEventListener(eventName, () => textarea.classList.remove('drag-over'), false);
-        });
+        ['dragenter', 'dragover'].forEach(eventName => textarea.addEventListener(eventName, () => textarea.classList.add('drag-over'), false));
+        ['dragleave', 'drop'].forEach(eventName => textarea.addEventListener(eventName, () => textarea.classList.remove('drag-over'), false));
         textarea.addEventListener('drop', handleDrop, false);
-
         function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
         function handleDrop(e) { handleFiles(e.dataTransfer.files); }
-
         function handleFiles(files) {
             [...files].forEach(file => {
                 const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
-                if (!allowedTypes.includes(file.type)) {
-                    showError(`Formato de arquivo não suportado: ${file.name}`);
-                    return;
-                }
-                if (file.size > 100 * 1024 * 1024) { // 100MB
-                    showError(`Arquivo muito grande (max 100MB): ${file.name}`);
-                    return;
-                }
+                if (!allowedTypes.includes(file.type)) { showError(`Formato não suportado: ${file.name}`); return; }
+                if (file.size > 100 * 1024 * 1024) { showError(`Arquivo muito grande: ${file.name}`); return; }
                 attachedFiles.push(file);
             });
             updateFileList();
         }
-
         function updateFileList() {
             fileList.innerHTML = '';
             document.getElementById('file-list-container').style.display = attachedFiles.length > 0 ? 'block' : 'none';
@@ -169,84 +186,127 @@ Use o botão "Converter para MD" para ver o resultado formatado.</textarea>
                 const removeBtn = document.createElement('span');
                 removeBtn.textContent = '×';
                 removeBtn.className = 'remove-file-btn';
-                removeBtn.onclick = () => {
-                    attachedFiles.splice(index, 1);
-                    updateFileList();
-                };
+                removeBtn.onclick = () => { attachedFiles.splice(index, 1); updateFileList(); };
                 li.appendChild(removeBtn);
                 fileList.appendChild(li);
             });
         }
         
+        // --- Lógica de Submissão Principal ---
         document.getElementById('request-form-real').addEventListener('submit', handleFormSubmit);
         document.getElementById('request-form-mock').addEventListener('submit', handleFormSubmit);
 
         async function handleFormSubmit(event) {
             event.preventDefault();
-            
+            // Resetar a interface
             errorContainer.innerHTML = '';
             resultsContainer.style.display = 'none';
+            finalResultContainer.style.display = 'none';
+            mergeBtn.style.display = 'none';
             document.querySelectorAll('.output-box').forEach(box => box.innerHTML = '');
-            rawTexts = {}; // Limpa os textos brutos anteriores
-
+            document.querySelectorAll('.convert-btn').forEach(btn => {
+                btn.disabled = false;
+                btn.innerText = 'Converter para MD';
+            });
+            rawTexts = {}; // Limpa os textos brutos
+            
+            // Iniciar o loader
             loaderMessage.textContent = 'Iniciando conexão...';
             progressBar.style.width = '0%';
             loader.style.display = 'flex';
-
+            
             const formData = new FormData();
+            formData.append('processing_mode', processingModeSwitch.checked ? 'atomic' : 'hierarchical');
             if (modeSwitch.checked) {
                 formData.append('mode', 'test');
                 formData.append('mock_text', document.getElementById('mock_text').value);
+                originalUserQuery = "Simulação de teste.";
             } else {
                 formData.append('mode', 'real');
-                formData.append('solicitacao', document.getElementById('solicitacao_usuario').value);
-                attachedFiles.forEach(file => {
-                    formData.append('files', file);
-                });
+                originalUserQuery = document.getElementById('solicitacao_usuario').value;
+                formData.append('solicitacao', originalUserQuery);
+                attachedFiles.forEach(file => { formData.append('files', file); });
             }
-
             try {
-                const response = await fetch('/process', {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                if (!response.ok || !response.body) {
-                    throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
-                }
-
+                const response = await fetch('/process', { method: 'POST', body: formData });
+                if (!response.ok || !response.body) throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
+                
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
-
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
-                    
                     const chunk = decoder.decode(value, { stream: true });
                     const lines = chunk.split('\n\n');
-                    
                     lines.forEach(line => {
                         if (line.startsWith('data: ')) {
                             const jsonData = line.substring(6);
                             if (jsonData.trim()) {
                                 try {
                                     const data = JSON.parse(jsonData);
-                                    processStreamData(data);
-                                } catch (e) {
-                                    console.error("Erro ao parsear JSON do stream:", jsonData);
-                                }
+                                    processStreamData(data, false);
+                                } catch (e) { console.error("Erro ao parsear JSON:", jsonData); }
                             }
                         }
                     });
                 }
             } catch (error) {
-                showError('A conexão com o servidor falhou. Verifique o console para detalhes.');
+                showError('A conexão com o servidor falhou.');
                 loader.style.display = 'none';
                 console.error("Fetch Error:", error);
             }
         }
 
-        function processStreamData(data) {
+        // --- Lógica do Botão de Merge ---
+        mergeBtn.addEventListener('click', async function() {
+            loaderMessage.textContent = 'Processando o merge dos textos...';
+            progressBar.style.width = '0%';
+            loader.style.display = 'flex';
+            this.style.display = 'none';
+            
+            // Sempre pega o texto bruto para o merge
+            const payload = {
+                solicitacao_usuario: originalUserQuery,
+                grok_text: rawTexts['grok-output'] || '',
+                sonnet_text: rawTexts['sonnet-output'] || '',
+                gemini_text: rawTexts['gemini-output'] || '',
+            };
+
+            try {
+                const response = await fetch('/merge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok || !response.body) throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n\n');
+                    lines.forEach(line => {
+                        if (line.startsWith('data: ')) {
+                            const jsonData = line.substring(6);
+                            if (jsonData.trim()) {
+                                try {
+                                    const data = JSON.parse(jsonData);
+                                    processStreamData(data, true); // true = é merge
+                                } catch (e) { console.error("Erro ao parsear JSON do merge:", jsonData); }
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                showError("A conexão falhou ao tentar processar o merge.");
+                loader.style.display = 'none';
+            }
+        });
+
+        // --- Função de Processamento de Stream (ATUALIZADA) ---
+        function processStreamData(data, isMerge) {
             if (data.error) {
                 showError(data.error);
                 loader.style.display = 'none';
@@ -256,45 +316,72 @@ Use o botão "Converter para MD" para ver o resultado formatado.</textarea>
             loaderMessage.textContent = data.message;
             progressBar.style.width = data.progress + '%';
 
-            if (data.partial_result) {
-                resultsContainer.style.display = 'flex';
-                const targetBox = document.getElementById(data.partial_result.id);
-                if (targetBox) {
-                    // MUDANÇA: Exibe como texto bruto e armazena
-                    rawTexts[data.partial_result.id] = data.partial_result.content;
-                    targetBox.innerText = data.partial_result.content; // Use innerText para exibir texto bruto
+            const processContent = (targetId, content, wordCount = null) => {
+                const targetBox = document.getElementById(targetId);
+                if (!targetBox) return;
+
+                // Armazena o texto bruto e exibe na tela
+                rawTexts[targetId] = content;
+                targetBox.innerText = content;
+                
+                if (targetId === 'final-output') {
+                    const finalTitle = document.getElementById('final-result-title');
+                    finalTitle.textContent = `Texto Final`;
+                    if (wordCount) {
+                        finalTitle.textContent += ` (${wordCount} palavras)`;
+                    }
+                    finalResultContainer.style.display = 'block';
+                } else {
+                     resultsContainer.style.display = 'flex';
                 }
+            };
+
+            if (isMerge && data.final_result) {
+                processContent('final-output', data.final_result.content, data.final_result.word_count);
+            } else if (data.partial_result) {
+                processContent(data.partial_result.id, data.partial_result.content);
             }
 
             if (data.done) {
                 setTimeout(() => {
                     loader.style.display = 'none';
-                }, 1000);
+                    if (data.mode === 'atomic' && !isMerge) {
+                        mergeBtn.style.display = 'block';
+                    }
+                }, 500);
             }
         }
 
+        // --- Funções de Utilitários (ATUALIZADAS) ---
         function showError(message) {
             errorContainer.innerHTML = `<div class="error-box"><strong>Erro:</strong> ${message}<span class="close-btn-error" onclick="this.parentElement.style.display='none';" title="Fechar">&times;</span></div>`;
         }
 
         function copyToClipboard(elementId) {
-            // MUDANÇA: Sempre copia o texto bruto original
+            // Sempre copia o texto bruto original do objeto rawTexts
             const textToCopy = rawTexts[elementId];
-            if (textToCopy) {
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    alert('Texto copiado!');
+            if (textToCopy !== undefined) {
+                navigator.clipboard.writeText(textToCopy).then(() => { 
+                    alert('Texto copiado!'); 
                 });
+            } else {
+                alert('Nenhum texto para copiar.');
             }
         }
 
-        // NOVA FUNÇÃO: Para converter o texto para Markdown
+        // NOVA FUNÇÃO para converter para Markdown sob demanda
         async function convertToMarkdown(elementId) {
             const button = event.target;
-            button.disabled = true; // Desabilita o botão para evitar cliques duplos
+            button.disabled = true;
             button.innerText = 'Convertendo...';
 
             const rawText = rawTexts[elementId];
-            if (!rawText) return;
+            if (rawText === undefined) {
+                showError('Não há texto para converter.');
+                button.innerText = 'Converter para MD';
+                button.disabled = false;
+                return;
+            }
 
             try {
                 const response = await fetch('/convert', {
@@ -308,12 +395,12 @@ Use o botão "Converter para MD" para ver o resultado formatado.</textarea>
                 const data = await response.json();
                 const targetBox = document.getElementById(elementId);
                 targetBox.innerHTML = data.html; // Insere o HTML convertido
+                button.innerText = 'Convertido'; // Mantém o botão desabilitado para indicar sucesso
             } catch (error) {
                 showError('Não foi possível converter o texto.');
                 console.error('Conversion error:', error);
-            } finally {
-                // Reabilita o botão, mas muda o texto para indicar que foi convertido
-                button.innerText = 'Convertido';
+                button.innerText = 'Converter para MD'; // Reabilita em caso de erro
+                button.disabled = false;
             }
         }
     </script>

@@ -70,6 +70,21 @@ def is_html_empty(html: str) -> bool:
     # 4. Verifica se o texto restante (após remover espaços nas pontas) está de fato vazio
     return not normalized_space.strip()
 
+def safe_json_dumps(data):
+    """Função para criar JSON de forma segura, escapando caracteres problemáticos"""
+    try:
+        return json.dumps(data, ensure_ascii=False)
+    except Exception as e:
+        print(f"Erro ao criar JSON: {e}")
+        # Fallback: tenta escapar o conteúdo problemático
+        if 'content' in str(data):
+            # Substitui o conteúdo por uma versão escapada
+            safe_data = data.copy() if isinstance(data, dict) else {}
+            if 'partial_result' in safe_data and 'content' in safe_data['partial_result']:
+                safe_data['partial_result']['content'] = safe_data['partial_result']['content'][:100] + "... [CONTEÚDO TRUNCADO DEVIDO A ERRO DE ENCODING]"
+            return json.dumps(safe_data, ensure_ascii=False)
+        return json.dumps({'error': 'Erro na serialização JSON'})
+
 @app.route('/')
 def index():
     """Renderiza a página inicial da aplicação."""
@@ -111,17 +126,22 @@ def process():
         if current_mode == 'test':
             mock_text = form_data.get('mock_text', 'Este é um **texto** de `simulação`.')
             # MUDANÇA: Envia o texto bruto na simulação
-            yield f"data: {json.dumps({'progress': 100, 'message': 'Simulação concluída!', 'partial_result': {'id': 'grok-output', 'content': mock_text}, 'done': True, 'mode': 'atomic' if processing_mode == 'atomic' else 'hierarchical'})}\n\n"
+            json_data = safe_json_dumps({'progress': 100, 'message': 'Simulação concluída!', 'partial_result': {'id': 'grok-output', 'content': mock_text}, 'done': True, 'mode': 'atomic' if processing_mode == 'atomic' else 'hierarchical'})
+            yield f"data: {json_data}\n\n"
             if processing_mode == 'atomic':
-                yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': mock_text}})}\n\n"
-                yield f"data: {json.dumps({'partial_result': {'id': 'gemini-output', 'content': mock_text}})}\n\n"
+                json_data = safe_json_dumps({'partial_result': {'id': 'sonnet-output', 'content': mock_text}})
+                yield f"data: {json_data}\n\n"
+                json_data = safe_json_dumps({'partial_result': {'id': 'gemini-output', 'content': mock_text}})
+                yield f"data: {json_data}\n\n"
         else:
             if not solicitacao_usuario:
-                yield f"data: {json.dumps({'error': 'Solicitação não fornecida.'})}\n\n"
+                json_data = safe_json_dumps({'error': 'Solicitação não fornecida.'})
+                yield f"data: {json_data}\n\n"
                 return
 
             try:
-                yield f"data: {json.dumps({'progress': 0, 'message': 'Processando arquivos e extraindo contexto...'})}\n\n"
+                json_data = safe_json_dumps({'progress': 0, 'message': 'Processando arquivos e extraindo contexto...'})
+                yield f"data: {json_data}\n\n"
                 rag_context = get_relevant_context(file_paths, solicitacao_usuario)
                 
                 output_parser = StrOutputParser()
@@ -152,7 +172,8 @@ def process():
                     models = {'grok': grok_llm, 'sonnet': claude_atomic_llm, 'gemini': gemini_llm}
                     
                     prompt = PromptTemplate(template=PROMPT_ATOMICO_INICIAL, input_variables=["solicitacao_usuario", "rag_context"])
-                    yield f"data: {json.dumps({'progress': 15, 'message': 'Iniciando processamento paralelo...'})}\n\n"
+                    json_data = safe_json_dumps({'progress': 15, 'message': 'Iniciando processamento paralelo...'})
+                    yield f"data: {json_data}\n\n"
                     
                     for name, llm in models.items():
                         chain = prompt | llm | output_parser
@@ -166,69 +187,100 @@ def process():
                     for key, result in results.items():
                         if result == "Error:EmptyResponse" or "Erro ao processar" in result:
                             error_msg = result if "Erro ao processar" in result else f"Falha no serviço {key.upper()}: Sem resposta."
-                            yield f"data: {json.dumps({'error': error_msg})}\n\n"
+                            json_data = safe_json_dumps({'error': error_msg})
+                            yield f"data: {json_data}\n\n"
                             return
 
-                    yield f"data: {json.dumps({'progress': 80, 'message': 'Todos os modelos responderam. Formatando saídas...'})}\n\n"
+                    json_data = safe_json_dumps({'progress': 80, 'message': 'Todos os modelos responderam. Formatando saídas...'})
+                    yield f"data: {json_data}\n\n"
                     
                     # MUDANÇA: Envia o texto bruto para cada modelo
                     grok_text = results.get('grok', '')
                     print(f"--- Resposta Bruta do GROK (Atômico) ---\n{grok_text}\n--------------------------------------")
-                    yield f"data: {json.dumps({'partial_result': {'id': 'grok-output', 'content': grok_text}})}\n\n"
+                    json_data = safe_json_dumps({'partial_result': {'id': 'grok-output', 'content': grok_text}})
+                    yield f"data: {json_data}\n\n"
 
                     sonnet_text = results.get('sonnet', '')
                     print(f"--- Resposta Bruta do Sonnet (Atômico) ---\n{sonnet_text}\n----------------------------------------")
-                    yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': sonnet_text}})}\n\n"
+                    json_data = safe_json_dumps({'partial_result': {'id': 'sonnet-output', 'content': sonnet_text}})
+                    yield f"data: {json_data}\n\n"
 
                     gemini_text = results.get('gemini', '')
                     print(f"--- Resposta Bruta do Gemini (Atômico) ---\n{gemini_text}\n----------------------------------------")
-                    yield f"data: {json.dumps({'partial_result': {'id': 'gemini-output', 'content': gemini_text}})}\n\n"
+                    json_data = safe_json_dumps({'partial_result': {'id': 'gemini-output', 'content': gemini_text}})
+                    yield f"data: {json_data}\n\n"
                     
-                    yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento Atômico concluído!', 'done': True, 'mode': 'atomic'})}\n\n"
+                    json_data = safe_json_dumps({'progress': 100, 'message': 'Processamento Atômico concluído!', 'done': True, 'mode': 'atomic'})
+                    yield f"data: {json_data}\n\n"
                 
                 else:
                     # --- LÓGICA HIERÁRQUICA (SEQUENCIAL) ---
-                    yield f"data: {json.dumps({'progress': 15, 'message': 'O GROK está processando sua solicitação...'})}\n\n"
+                    print("=== INICIANDO MODO HIERÁRQUICO ===")
+                    json_data = safe_json_dumps({'progress': 15, 'message': 'O GROK está processando sua solicitação...'})
+                    yield f"data: {json_data}\n\n"
+                    
                     prompt_grok = PromptTemplate(template=PROMPT_HIERARQUICO_GROK, input_variables=["solicitacao_usuario", "rag_context"])
                     chain_grok = prompt_grok | grok_llm | output_parser
                     resposta_grok = chain_grok.invoke({"solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context})
                     
                     if not resposta_grok or not resposta_grok.strip():
-                        yield f"data: {json.dumps({'error': 'Falha no serviço GROK: Sem resposta.'})}\n\n"
+                        json_data = safe_json_dumps({'error': 'Falha no serviço GROK: Sem resposta.'})
+                        yield f"data: {json_data}\n\n"
                         return
                     
-                    print(f"--- Resposta Bruta do GROK (Hierárquico) ---\n{resposta_grok}\n------------------------------------------")
-                    # MUDANÇA: Envia o texto bruto em vez de HTML
-                    yield f"data: {json.dumps({'progress': 33, 'message': 'Claude Sonnet está processando...', 'partial_result': {'id': 'grok-output', 'content': resposta_grok}})}\n\n"
+                    print(f"--- Resposta Bruta do GROK (Hierárquico) ---\nTamanho: {len(resposta_grok)} caracteres\nPrimeiros 200 chars: {resposta_grok[:200]}...\n------------------------------------------")
                     
+                    # Enviando resposta do GROK
+                    json_data = safe_json_dumps({'progress': 33, 'message': 'Claude Sonnet está processando...', 'partial_result': {'id': 'grok-output', 'content': resposta_grok}})
+                    print(f"=== JSON DO GROK CRIADO COM SUCESSO ===")
+                    yield f"data: {json_data}\n\n"
+                    
+                    print("=== INICIANDO PROCESSAMENTO DO SONNET ===")
                     prompt_sonnet = PromptTemplate(template=PROMPT_HIERARQUICO_SONNET, input_variables=["solicitacao_usuario", "texto_para_analise"])
                     claude_with_max_tokens = claude_llm.bind(max_tokens=20000)
                     chain_sonnet = prompt_sonnet | claude_with_max_tokens | output_parser
                     resposta_sonnet = chain_sonnet.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_grok})
                     
                     if not resposta_sonnet or not resposta_sonnet.strip():
-                        yield f"data: {json.dumps({'error': 'Falha no serviço Claude Sonnet: Sem resposta.'})}\n\n"
+                        json_data = safe_json_dumps({'error': 'Falha no serviço Claude Sonnet: Sem resposta.'})
+                        yield f"data: {json_data}\n\n"
                         return
 
-                    print(f"--- Resposta Bruta do Sonnet (Hierárquico) ---\n{resposta_sonnet}\n--------------------------------------------")
-                    # CORREÇÃO: Aqui estava o erro - faltava vírgula após 'content': resposta_sonnet
-                    yield f"data: {json.dumps({'progress': 66, 'message': 'Gemini está processando...', 'partial_result': {'id': 'sonnet-output', 'content': resposta_sonnet}})}\n\n"
+                    print(f"--- Resposta Bruta do Sonnet (Hierárquico) ---\nTamanho: {len(resposta_sonnet)} caracteres\nPrimeiros 200 chars: {resposta_sonnet[:200]}...\n--------------------------------------------")
                     
+                    # Tentando criar JSON do SONNET
+                    print("=== TENTANDO CRIAR JSON DO SONNET ===")
+                    try:
+                        sonnet_json_data = {'progress': 66, 'message': 'Gemini está processando...', 'partial_result': {'id': 'sonnet-output', 'content': resposta_sonnet}}
+                        json_data = safe_json_dumps(sonnet_json_data)
+                        print(f"=== JSON DO SONNET CRIADO COM SUCESSO ===")
+                        yield f"data: {json_data}\n\n"
+                    except Exception as json_error:
+                        print(f"=== ERRO AO CRIAR JSON DO SONNET: {json_error} ===")
+                        # Fallback: enviar com conteúdo truncado
+                        fallback_data = {'progress': 66, 'message': 'Gemini está processando...', 'partial_result': {'id': 'sonnet-output', 'content': resposta_sonnet[:1000] + "... [TRUNCADO]"}}
+                        json_data = safe_json_dumps(fallback_data)
+                        yield f"data: {json_data}\n\n"
+                    
+                    print("=== INICIANDO PROCESSAMENTO DO GEMINI ===")
                     prompt_gemini = PromptTemplate(template=PROMPT_HIERARQUICO_GEMINI, input_variables=["solicitacao_usuario", "texto_para_analise"])
                     chain_gemini = prompt_gemini | gemini_llm | output_parser
                     resposta_gemini = chain_gemini.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_sonnet})
                     
                     if not resposta_gemini or not resposta_gemini.strip():
-                        yield f"data: {json.dumps({'error': 'Falha no serviço Gemini: Sem resposta.'})}\n\n"
+                        json_data = safe_json_dumps({'error': 'Falha no serviço Gemini: Sem resposta.'})
+                        yield f"data: {json_data}\n\n"
                         return
 
-                    print(f"--- Resposta Bruta do Gemini (Hierárquico) ---\n{resposta_gemini}\n--------------------------------------------")
-                    # MUDANÇA: Envia o texto bruto em vez de HTML
-                    yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento concluído!', 'partial_result': {'id': 'gemini-output', 'content': resposta_gemini}, 'done': True, 'mode': 'hierarchical'})}\n\n"
+                    print(f"--- Resposta Bruta do Gemini (Hierárquico) ---\nTamanho: {len(resposta_gemini)} caracteres\nPrimeiros 200 chars: {resposta_gemini[:200]}...\n--------------------------------------------")
+                    
+                    json_data = safe_json_dumps({'progress': 100, 'message': 'Processamento concluído!', 'partial_result': {'id': 'gemini-output', 'content': resposta_gemini}, 'done': True, 'mode': 'hierarchical'})
+                    yield f"data: {json_data}\n\n"
 
             except Exception as e:
                 print(f"Ocorreu um erro durante o processamento: {e}")
-                yield f"data: {json.dumps({'error': f'Ocorreu um erro inesperado na aplicação: {e}'})}\n\n"
+                json_data = safe_json_dumps({'error': f'Ocorreu um erro inesperado na aplicação: {e}'})
+                yield f"data: {json_data}\n\n"
 
     return Response(generate_stream(mode, form_data, temp_file_paths), mimetype='text/event-stream')
 
@@ -240,7 +292,8 @@ def merge():
     def generate_merge_stream():
         """Gera a resposta do merge em streaming."""
         try:
-            yield f"data: {json.dumps({'progress': 0, 'message': 'Iniciando o processo de merge...'})}\n\n"
+            json_data = safe_json_dumps({'progress': 0, 'message': 'Iniciando o processo de merge...'})
+            yield f"data: {json_data}\n\n"
             
             output_parser = StrOutputParser()
             prompt_merge = PromptTemplate(template=PROMPT_ATOMICO_MERGE, input_variables=["solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
@@ -248,7 +301,8 @@ def merge():
             grok_with_max_tokens = grok_llm.bind(max_tokens=20000)
             chain_merge = prompt_merge | grok_with_max_tokens | output_parser
 
-            yield f"data: {json.dumps({'progress': 50, 'message': 'Enviando textos para o GROK para consolidação...'})}\n\n"
+            json_data = safe_json_dumps({'progress': 50, 'message': 'Enviando textos para o GROK para consolidação...'})
+            yield f"data: {json_data}\n\n"
 
             resposta_merge = chain_merge.invoke({
                 "solicitacao_usuario": data.get('solicitacao_usuario'),
@@ -258,18 +312,20 @@ def merge():
             })
             
             if not resposta_merge or not resposta_merge.strip():
-                yield f"data: {json.dumps({'error': 'Falha no serviço de Merge (GROK): Sem resposta.'})}\n\n"
+                json_data = safe_json_dumps({'error': 'Falha no serviço de Merge (GROK): Sem resposta.'})
+                yield f"data: {json_data}\n\n"
                 return
             
             print(f"--- Resposta Bruta do Merge (GROK) ---\n{resposta_merge}\n------------------------------------")
             word_count = len(resposta_merge.split())
             
-            # MUDANÇA: Envia o texto bruto do merge em vez de HTML
-            yield f"data: {json.dumps({'progress': 100, 'message': 'Merge concluído!', 'final_result': {'content': resposta_merge, 'word_count': word_count}, 'done': True})}\n\n"
+            json_data = safe_json_dumps({'progress': 100, 'message': 'Merge concluído!', 'final_result': {'content': resposta_merge, 'word_count': word_count}, 'done': True})
+            yield f"data: {json_data}\n\n"
 
         except Exception as e:
             print(f"Erro no processo de merge: {e}")
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            json_data = safe_json_dumps({'error': str(e)})
+            yield f"data: {json_data}\n\n"
             
     return Response(generate_merge_stream(), mimetype='text/event-stream')
 
