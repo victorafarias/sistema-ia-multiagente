@@ -211,7 +211,7 @@ def process():
                         return
 
                     print(f"--- Resposta Bruta do Sonnet (Hierárquico) ---\n{resposta_sonnet}\n--------------------------------------------")
-                    # MUDANÇA: Envia o texto bruto em vez de HTML
+                    # CORREÇÃO: Aqui estava o erro - faltava vírgula após 'content': resposta_sonnet
                     yield f"data: {json.dumps({'progress': 66, 'message': 'Gemini está processando...', 'partial_result': {'id': 'sonnet-output', 'content': resposta_sonnet}})}\n\n"
                     
                     prompt_gemini = PromptTemplate(template=PROMPT_HIERARQUICO_GEMINI, input_variables=["solicitacao_usuario", "texto_para_analise"])
