@@ -7,7 +7,9 @@ import os
 import uuid
 import threading
 import concurrent.futures
-from html import escape # Importa a função escape para segurança
+from html import escape
+import re
+from markdown_it import MarkdownIt # ✅ NOVA IMPORTAÇÃO
 
 # Importações do LangChain
 from langchain.prompts import PromptTemplate
@@ -29,6 +31,16 @@ if not os.path.exists('uploads'):
     os.makedirs('uploads')
 
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
+
+# ✅ Instancia o novo conversor de Markdown
+md = MarkdownIt()
+
+def is_html_empty(html: str) -> bool:
+    """Verifica se uma string HTML não contém texto visível."""
+    if not html:
+        return True
+    text_only = re.sub('<[^<]+?>', '', html)
+    return not text_only.strip()
 
 @app.route('/')
 def index():
@@ -58,7 +70,7 @@ def process():
         
         if current_mode == 'test':
             mock_text = form_data.get('mock_text', 'Este é um texto de simulação.')
-            mock_html = f"<pre>{escape(mock_text)}</pre>"
+            mock_html = md.render(mock_text)
             yield f"data: {json.dumps({'progress': 100, 'message': 'Simulação concluída!', 'partial_result': {'id': 'grok-output', 'content': mock_html}, 'done': True, 'mode': 'atomic' if processing_mode == 'atomic' else 'hierarchical'})}\n\n"
             if processing_mode == 'atomic':
                 yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': mock_html}})}\n\n"
@@ -117,20 +129,26 @@ def process():
 
                     yield f"data: {json.dumps({'progress': 80, 'message': 'Todos os modelos responderam. Formatando saídas...'})}\n\n"
                     
-                    # GROK
                     grok_text = results.get('grok', '')
                     print(f"--- Resposta Bruta do GROK (Atômico) ---\n{grok_text}\n--------------------------------------")
-                    yield f"data: {json.dumps({'partial_result': {'id': 'grok-output', 'content': f'<pre>{escape(grok_text)}</pre>'}})}\n\n"
+                    grok_html = md.render(grok_text)
+                    if is_html_empty(grok_html):
+                        grok_html = f"<pre>{escape(grok_text)}</pre>"
+                    yield f"data: {json.dumps({'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
 
-                    # SONNET
                     sonnet_text = results.get('sonnet', '')
                     print(f"--- Resposta Bruta do Sonnet (Atômico) ---\n{sonnet_text}\n----------------------------------------")
-                    yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': f'<pre>{escape(sonnet_text)}</pre>'}})}\n\n"
+                    sonnet_html = md.render(sonnet_text)
+                    if is_html_empty(sonnet_html):
+                        sonnet_html = f"<pre>{escape(sonnet_text)}</pre>"
+                    yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': sonnet_html}})}\n\n"
 
-                    # GEMINI
                     gemini_text = results.get('gemini', '')
                     print(f"--- Resposta Bruta do Gemini (Atômico) ---\n{gemini_text}\n----------------------------------------")
-                    yield f"data: {json.dumps({'partial_result': {'id': 'gemini-output', 'content': f'<pre>{escape(gemini_text)}</pre>'}})}\n\n"
+                    gemini_html = md.render(gemini_text)
+                    if is_html_empty(gemini_html):
+                        gemini_html = f"<pre>{escape(gemini_text)}</pre>"
+                    yield f"data: {json.dumps({'partial_result': {'id': 'gemini-output', 'content': gemini_html}})}\n\n"
                     
                     yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento Atômico concluído!', 'done': True, 'mode': 'atomic'})}\n\n"
                 
@@ -146,7 +164,10 @@ def process():
                         return
                     
                     print(f"--- Resposta Bruta do GROK (Hierárquico) ---\n{resposta_grok}\n------------------------------------------")
-                    yield f"data: {json.dumps({'progress': 33, 'message': 'Claude Sonnet está processando...', 'partial_result': {'id': 'grok-output', 'content': f'<pre>{escape(resposta_grok)}</pre>'}})}\n\n"
+                    grok_html = md.render(resposta_grok)
+                    if is_html_empty(grok_html):
+                        grok_html = f"<pre>{escape(resposta_grok)}</pre>"
+                    yield f"data: {json.dumps({'progress': 33, 'message': 'Claude Sonnet está processando...', 'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
                     
                     prompt_sonnet = PromptTemplate(template=PROMPT_HIERARQUICO_SONNET, input_variables=["solicitacao_usuario", "texto_para_analise"])
                     claude_with_max_tokens = claude_llm.bind(max_tokens=20000)
@@ -158,7 +179,10 @@ def process():
                         return
 
                     print(f"--- Resposta Bruta do Sonnet (Hierárquico) ---\n{resposta_sonnet}\n--------------------------------------------")
-                    yield f"data: {json.dumps({'progress': 66, 'message': 'Gemini está processando...', 'partial_result': {'id': 'sonnet-output', 'content': f'<pre>{escape(resposta_sonnet)}</pre>'}})}\n\n"
+                    sonnet_html = md.render(resposta_sonnet)
+                    if is_html_empty(sonnet_html):
+                        sonnet_html = f"<pre>{escape(resposta_sonnet)}</pre>"
+                    yield f"data: {json.dumps({'progress': 66, 'message': 'Gemini está processando...', 'partial_result': {'id': 'sonnet-output', 'content': sonnet_html}})}\n\n"
                     
                     prompt_gemini = PromptTemplate(template=PROMPT_HIERARQUICO_GEMINI, input_variables=["solicitacao_usuario", "texto_para_analise"])
                     chain_gemini = LLMChain(llm=gemini_llm, prompt=prompt_gemini)
@@ -169,7 +193,10 @@ def process():
                         return
 
                     print(f"--- Resposta Bruta do Gemini (Hierárquico) ---\n{resposta_gemini}\n--------------------------------------------")
-                    yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento concluído!', 'partial_result': {'id': 'gemini-output', 'content': f'<pre>{escape(resposta_gemini)}</pre>'}, 'done': True, 'mode': 'hierarchical'})}\n\n"
+                    gemini_html = md.render(resposta_gemini)
+                    if is_html_empty(gemini_html):
+                        gemini_html = f"<pre>{escape(gemini_html)}</pre>"
+                    yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento concluído!', 'partial_result': {'id': 'gemini-output', 'content': gemini_html}, 'done': True, 'mode': 'hierarchical'})}\n\n"
 
             except Exception as e:
                 print(f"Ocorreu um erro durante o processamento: {e}")
@@ -189,7 +216,6 @@ def merge():
             
             prompt_merge = PromptTemplate(template=PROMPT_ATOMICO_MERGE, input_variables=["solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
             
-            # Cria uma instância do GROK com limite de tokens aumentado para o merge
             grok_with_max_tokens = grok_llm.bind(max_tokens=100000)
             chain_merge = LLMChain(llm=grok_with_max_tokens, prompt=prompt_merge)
 
@@ -206,8 +232,12 @@ def merge():
                 yield f"data: {json.dumps({'error': 'Falha no serviço de Merge (GROK): Sem resposta.'})}\n\n"
                 return
             
+            print(f"--- Resposta Bruta do Merge (GROK) ---\n{resposta_merge}\n------------------------------------")
             word_count = len(resposta_merge.split())
-            merge_html = f"<pre>{escape(resposta_merge)}</pre>"
+            
+            merge_html = md.render(resposta_merge)
+            if is_html_empty(merge_html):
+                merge_html = f"<pre>{escape(resposta_merge)}</pre>"
             
             yield f"data: {json.dumps({'progress': 100, 'message': 'Merge concluído!', 'final_result': {'content': merge_html, 'word_count': word_count}, 'done': True})}\n\n"
 
