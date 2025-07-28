@@ -1,13 +1,14 @@
 # app.py
 
-from flask import Flask, render_template, request, Response, jsonify
+from flask import Flask, render_template, request, Response
 import markdown2
 import json
 import time
 import os
 import uuid
 import threading
-import concurrent.futures # Nova importação para timeout
+import concurrent.futures
+import re  # Importação para expressões regulares
 
 # Importações do LangChain
 from langchain.prompts import PromptTemplate
@@ -28,7 +29,16 @@ app = Flask(__name__)
 if not os.path.exists('uploads'):
     os.makedirs('uploads')
 
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024 
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
+
+def is_html_empty(html: str) -> bool:
+    """Verifica se uma string HTML não contém texto visível."""
+    if not html:
+        return True
+    # Remove todas as tags HTML
+    text_only = re.sub('<[^<]+?>', '', html)
+    # Verifica se o texto restante é apenas espaço em branco
+    return not text_only.strip()
 
 @app.route('/')
 def index():
@@ -47,7 +57,6 @@ def process():
     if mode == 'real':
         for file in files:
             if file and file.filename:
-                # Cria um nome de arquivo único para evitar conflitos
                 unique_filename = str(uuid.uuid4()) + "_" + os.path.basename(file.filename)
                 file_path = os.path.join('uploads', unique_filename)
                 file.save(file_path)
@@ -58,7 +67,6 @@ def process():
         solicitacao_usuario = form_data.get('solicitacao', '')
         
         if current_mode == 'test':
-            # Lógica para o modo de teste/simulação
             mock_text = form_data.get('mock_text', 'Este é um texto de simulação.')
             mock_html = markdown2.markdown(mock_text, extras=["fenced-code-blocks", "tables"])
             yield f"data: {json.dumps({'progress': 100, 'message': 'Simulação concluída!', 'partial_result': {'id': 'grok-output', 'content': mock_html}, 'done': True, 'mode': 'atomic' if processing_mode == 'atomic' else 'hierarchical'})}\n\n"
@@ -66,7 +74,6 @@ def process():
                 yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': mock_html}})}\n\n"
                 yield f"data: {json.dumps({'partial_result': {'id': 'gemini-output', 'content': mock_html}})}\n\n"
         else:
-            # Lógica para o modo real
             if not solicitacao_usuario:
                 yield f"data: {json.dumps({'error': 'Solicitação não fornecida.'})}\n\n"
                 return
@@ -81,7 +88,6 @@ def process():
                     threads = []
                     
                     def run_chain_with_timeout(chain, inputs, key, timeout=300):
-                        """Executa uma chain com timeout e trata respostas vazias."""
                         def task():
                             return chain.invoke(inputs)['text']
                         
@@ -98,7 +104,10 @@ def process():
                             except Exception as e:
                                 results[key] = f"Erro ao processar {key.upper()}: {e}"
 
-                    models = {'grok': grok_llm, 'sonnet': claude_llm, 'gemini': gemini_llm}
+                    # ✅ CORREÇÃO: Aumenta o max_tokens para o Claude Sonnet também no modo atômico
+                    claude_atomic_llm = claude_llm.bind(max_tokens=20000)
+                    models = {'grok': grok_llm, 'sonnet': claude_atomic_llm, 'gemini': gemini_llm}
+                    
                     prompt = PromptTemplate(template=PROMPT_ATOMICO_INICIAL, input_variables=["solicitacao_usuario", "rag_context"])
                     yield f"data: {json.dumps({'progress': 15, 'message': 'Iniciando processamento paralelo...'})}\n\n"
                     
@@ -119,35 +128,24 @@ def process():
 
                     yield f"data: {json.dumps({'progress': 80, 'message': 'Todos os modelos responderam. Formatando saídas...'})}\n\n"
                     
-                    # ✅ VALIDAÇÃO E LOGS PARA O MODO ATÔMICO
-                    
                     # GROK
                     grok_text = results.get('grok', '')
-                    print("--- Resposta Bruta do GROK (Atômico) ---")
-                    print(grok_text)
-                    print("---------------------------------------")
                     grok_html = markdown2.markdown(grok_text, extras=["fenced-code-blocks", "tables"])
-                    if not grok_html or not grok_html.strip():
+                    if is_html_empty(grok_html):
                         grok_html = f"<pre>{grok_text}</pre>"
                     yield f"data: {json.dumps({'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
 
                     # SONNET
                     sonnet_text = results.get('sonnet', '')
-                    print("--- Resposta Bruta do Sonnet (Atômico) ---")
-                    print(sonnet_text)
-                    print("-----------------------------------------")
                     sonnet_html = markdown2.markdown(sonnet_text, extras=["fenced-code-blocks", "tables"])
-                    if not sonnet_html or not sonnet_html.strip():
+                    if is_html_empty(sonnet_html):
                         sonnet_html = f"<pre>{sonnet_text}</pre>"
                     yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': sonnet_html}})}\n\n"
 
                     # GEMINI
                     gemini_text = results.get('gemini', '')
-                    print("--- Resposta Bruta do Gemini (Atômico) ---")
-                    print(gemini_text)
-                    print("-----------------------------------------")
                     gemini_html = markdown2.markdown(gemini_text, extras=["fenced-code-blocks", "tables"])
-                    if not gemini_html or not gemini_html.strip():
+                    if is_html_empty(gemini_html):
                         gemini_html = f"<pre>{gemini_text}</pre>"
                     yield f"data: {json.dumps({'partial_result': {'id': 'gemini-output', 'content': gemini_html}})}\n\n"
                     
@@ -161,17 +159,13 @@ def process():
                     resposta_grok = chain_grok.invoke({"solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context})['text']
                     
                     if not resposta_grok or not resposta_grok.strip():
-                        yield f"data: {json.dumps({'error': 'Falha no serviço GROK: Sem resposta. O processo foi interrompido.'})}\n\n"
+                        yield f"data: {json.dumps({'error': 'Falha no serviço GROK: Sem resposta.'})}\n\n"
                         return
                     
-                    print("--- Resposta Bruta do GROK (Hierárquico) ---")
-                    print(resposta_grok)
-                    print("-------------------------------------------")
                     grok_html = markdown2.markdown(resposta_grok, extras=["fenced-code-blocks", "tables"])
-                    if not grok_html or not grok_html.strip():
+                    if is_html_empty(grok_html):
                         grok_html = f"<pre>{resposta_grok}</pre>"
-
-                    yield f"data: {json.dumps({'progress': 33, 'message': 'Agora, o Claude Sonnet está aprofundando o texto...', 'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
+                    yield f"data: {json.dumps({'progress': 33, 'message': 'Claude Sonnet está processando...', 'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
                     
                     prompt_sonnet = PromptTemplate(template=PROMPT_HIERARQUICO_SONNET, input_variables=["solicitacao_usuario", "texto_para_analise"])
                     claude_with_max_tokens = claude_llm.bind(max_tokens=20000)
@@ -179,33 +173,25 @@ def process():
                     resposta_sonnet = chain_sonnet.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_grok})['text']
                     
                     if not resposta_sonnet or not resposta_sonnet.strip():
-                        yield f"data: {json.dumps({'error': 'Falha no serviço Claude Sonnet: Sem resposta. O processo foi interrompido.'})}\n\n"
+                        yield f"data: {json.dumps({'error': 'Falha no serviço Claude Sonnet: Sem resposta.'})}\n\n"
                         return
 
-                    print("--- Resposta Bruta do Sonnet (Hierárquico) ---")
-                    print(resposta_sonnet)
-                    print("---------------------------------------------")
                     sonnet_html = markdown2.markdown(resposta_sonnet, extras=["fenced-code-blocks", "tables"])
-                    if not sonnet_html or not sonnet_html.strip():
+                    if is_html_empty(sonnet_html):
                         sonnet_html = f"<pre>{resposta_sonnet}</pre>"
-
-                    yield f"data: {json.dumps({'progress': 66, 'message': 'Revisão final com o Gemini...', 'partial_result': {'id': 'sonnet-output', 'content': sonnet_html}})}\n\n"
+                    yield f"data: {json.dumps({'progress': 66, 'message': 'Gemini está processando...', 'partial_result': {'id': 'sonnet-output', 'content': sonnet_html}})}\n\n"
                     
                     prompt_gemini = PromptTemplate(template=PROMPT_HIERARQUICO_GEMINI, input_variables=["solicitacao_usuario", "texto_para_analise"])
                     chain_gemini = LLMChain(llm=gemini_llm, prompt=prompt_gemini)
                     resposta_gemini = chain_gemini.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_sonnet})['text']
                     
                     if not resposta_gemini or not resposta_gemini.strip():
-                        yield f"data: {json.dumps({'error': 'Falha no serviço Gemini: Sem resposta. O processo foi interrompido.'})}\n\n"
+                        yield f"data: {json.dumps({'error': 'Falha no serviço Gemini: Sem resposta.'})}\n\n"
                         return
 
-                    print("--- Resposta Bruta do Gemini (Hierárquico) ---")
-                    print(resposta_gemini)
-                    print("---------------------------------------------")
                     gemini_html = markdown2.markdown(resposta_gemini, extras=["fenced-code-blocks", "tables"])
-                    if not gemini_html or not gemini_html.strip():
+                    if is_html_empty(gemini_html):
                         gemini_html = f"<pre>{resposta_gemini}</pre>"
-
                     yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento concluído!', 'partial_result': {'id': 'gemini-output', 'content': gemini_html}, 'done': True, 'mode': 'hierarchical'})}\n\n"
 
             except Exception as e:
@@ -214,7 +200,6 @@ def process():
 
     return Response(generate_stream(mode, form_data, temp_file_paths), mimetype='text/event-stream')
 
-# --- ROTA PARA O MERGE ---
 @app.route('/merge', methods=['POST'])
 def merge():
     """Recebe os textos do modo Atômico e os consolida usando um LLM."""
@@ -226,7 +211,6 @@ def merge():
             yield f"data: {json.dumps({'progress': 0, 'message': 'Iniciando o processo de merge...'})}\n\n"
             
             prompt_merge = PromptTemplate(template=PROMPT_ATOMICO_MERGE, input_variables=["solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
-            
             chain_merge = LLMChain(llm=grok_llm, prompt=prompt_merge)
 
             yield f"data: {json.dumps({'progress': 50, 'message': 'Enviando textos para o GROK para consolidação...'})}\n\n"
@@ -254,5 +238,4 @@ def merge():
     return Response(generate_merge_stream(), mimetype='text/event-stream')
 
 if __name__ == '__main__':
-    # Executa a aplicação Flask em modo de depuração
     app.run(debug=True)
