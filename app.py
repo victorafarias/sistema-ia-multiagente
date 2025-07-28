@@ -42,7 +42,7 @@ def is_html_empty(html: str) -> bool:
     """
     if not html:
         return True
-    # 1. Remove todas as tags HTML
+    # 1. Remove todas as tags do HTML
     text_only = re.sub('<[^<]+?>', '', html)
     # 2. Decodifica entidades HTML (ex: &nbsp; para ' ')
     decoded_text = unescape(text_only)
