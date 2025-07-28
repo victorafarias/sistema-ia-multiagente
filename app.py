@@ -1,6 +1,6 @@
 # app.py
 
-from flask import Flask, render_template, request, Response
+from flask import Flask, render_template, request, Response, jsonify
 import json
 import time
 import os
@@ -36,8 +36,7 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 # Instancia o conversor de Markdown
 md = MarkdownIt()
 
-# [ADICIONADO] Função para renderização com fallback: tenta MarkdownIt, depois markdown2
-
+# Função para renderização com fallback: tenta MarkdownIt, depois markdown2
 def render_markdown_cascata(texto: str) -> str:
     try:
         html_1 = md.render(texto)
@@ -47,7 +46,7 @@ def render_markdown_cascata(texto: str) -> str:
         print(f"MarkdownIt falhou: {e}")
 
     try:
-        html_2 = markdown2_render(texto)
+        html_2 = markdown2_render(texto, extras=["fenced-code-blocks", "tables"])
         if not is_html_empty(html_2):
             return html_2
     except Exception as e:
@@ -76,6 +75,18 @@ def index():
     """Renderiza a página inicial da aplicação."""
     return render_template('index.html')
 
+# ROTA ATUALIZADA: Para converter texto em Markdown sob demanda
+@app.route('/convert', methods=['POST'])
+def convert():
+    data = request.get_json()
+    if not data or 'text' not in data:
+        return jsonify({'error': 'Nenhum texto fornecido'}), 400
+    
+    text_to_convert = data['text']
+    # USA A FUNÇÃO DE CASCATA PARA MAIOR ROBUSTEZ
+    converted_html = render_markdown_cascata(text_to_convert)
+    return jsonify({'html': converted_html})
+
 @app.route('/process', methods=['POST'])
 def process():
     """Processa a solicitação do usuário nos modos Hierárquico ou Atômico."""
@@ -98,12 +109,12 @@ def process():
         solicitacao_usuario = form_data.get('solicitacao', '')
         
         if current_mode == 'test':
-            mock_text = form_data.get('mock_text', 'Este é um texto de simulação.')
-            mock_html = md.render(mock_text)
-            yield f"data: {json.dumps({'progress': 100, 'message': 'Simulação concluída!', 'partial_result': {'id': 'grok-output', 'content': mock_html}, 'done': True, 'mode': 'atomic' if processing_mode == 'atomic' else 'hierarchical'})}\n\n"
+            mock_text = form_data.get('mock_text', 'Este é um **texto** de `simulação`.')
+            # MUDANÇA: Envia o texto bruto na simulação
+            yield f"data: {json.dumps({'progress': 100, 'message': 'Simulação concluída!', 'partial_result': {'id': 'grok-output', 'content': mock_text}, 'done': True, 'mode': 'atomic' if processing_mode == 'atomic' else 'hierarchical'})}\n\n"
             if processing_mode == 'atomic':
-                yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': mock_html}})}\n\n"
-                yield f"data: {json.dumps({'partial_result': {'id': 'gemini-output', 'content': mock_html}})}\n\n"
+                yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': mock_text}})}\n\n"
+                yield f"data: {json.dumps({'partial_result': {'id': 'gemini-output', 'content': mock_text}})}\n\n"
         else:
             if not solicitacao_usuario:
                 yield f"data: {json.dumps({'error': 'Solicitação não fornecida.'})}\n\n"
@@ -160,26 +171,18 @@ def process():
 
                     yield f"data: {json.dumps({'progress': 80, 'message': 'Todos os modelos responderam. Formatando saídas...'})}\n\n"
                     
+                    # MUDANÇA: Envia o texto bruto para cada modelo
                     grok_text = results.get('grok', '')
                     print(f"--- Resposta Bruta do GROK (Atômico) ---\n{grok_text}\n--------------------------------------")
-                    grok_html = render_markdown_cascata(grok_text)
-                    if is_html_empty(grok_html):
-                        grok_html = f"<pre>{escape(grok_text)}</pre>"
-                    yield f"data: {json.dumps({'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
+                    yield f"data: {json.dumps({'partial_result': {'id': 'grok-output', 'content': grok_text}})}\n\n"
 
                     sonnet_text = results.get('sonnet', '')
                     print(f"--- Resposta Bruta do Sonnet (Atômico) ---\n{sonnet_text}\n----------------------------------------")
-                    sonnet_html = render_markdown_cascata(sonnet_text)
-                    if is_html_empty(sonnet_html):
-                        sonnet_html = f"<pre>{escape(sonnet_text)}</pre>"
-                    yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': sonnet_html}})}\n\n"
+                    yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': sonnet_text}})}\n\n"
 
                     gemini_text = results.get('gemini', '')
                     print(f"--- Resposta Bruta do Gemini (Atômico) ---\n{gemini_text}\n----------------------------------------")
-                    gemini_html = render_markdown_cascata(gemini_text)
-                    if is_html_empty(gemini_html):
-                        gemini_html = f"<pre>{escape(gemini_text)}</pre>"
-                    yield f"data: {json.dumps({'partial_result': {'id': 'gemini-output', 'content': gemini_html}})}\n\n"
+                    yield f"data: {json.dumps({'partial_result': {'id': 'gemini-output', 'content': gemini_text}})}\n\n"
                     
                     yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento Atômico concluído!', 'done': True, 'mode': 'atomic'})}\n\n"
                 
@@ -195,10 +198,8 @@ def process():
                         return
                     
                     print(f"--- Resposta Bruta do GROK (Hierárquico) ---\n{resposta_grok}\n------------------------------------------")
-                    grok_html = render_markdown_cascata(resposta_grok)
-                    if is_html_empty(grok_html):
-                        grok_html = f"<pre>{escape(resposta_grok)}</pre>"
-                    yield f"data: {json.dumps({'progress': 33, 'message': 'Claude Sonnet está processando...', 'partial_result': {'id': 'grok-output', 'content': grok_html}})}\n\n"
+                    # MUDANÇA: Envia o texto bruto em vez de HTML
+                    yield f"data: {json.dumps({'progress': 33, 'message': 'Claude Sonnet está processando...', 'partial_result': {'id': 'grok-output', 'content': resposta_grok}})}\n\n"
                     
                     prompt_sonnet = PromptTemplate(template=PROMPT_HIERARQUICO_SONNET, input_variables=["solicitacao_usuario", "texto_para_analise"])
                     claude_with_max_tokens = claude_llm.bind(max_tokens=20000)
@@ -210,10 +211,8 @@ def process():
                         return
 
                     print(f"--- Resposta Bruta do Sonnet (Hierárquico) ---\n{resposta_sonnet}\n--------------------------------------------")
-                    sonnet_html = render_markdown_cascata(resposta_sonnet)
-                    if is_html_empty(sonnet_html):
-                        sonnet_html = f"<pre>{escape(resposta_sonnet)}</pre>"
-                    yield f"data: {json.dumps({'progress': 66, 'message': 'Gemini está processando...', 'partial_result': {'id': 'sonnet-output', 'content': sonnet_html}})}\n\n"
+                    # MUDANÇA: Envia o texto bruto em vez de HTML
+                    yield f"data: {json.dumps({'progress': 66, 'message': 'Gemini está processando...', 'partial_result': {'id': 'sonnet-output', 'content': resposta_sonnet}})}\n\n"
                     
                     prompt_gemini = PromptTemplate(template=PROMPT_HIERARQUICO_GEMINI, input_variables=["solicitacao_usuario", "texto_para_analise"])
                     chain_gemini = prompt_gemini | gemini_llm | output_parser
@@ -224,10 +223,8 @@ def process():
                         return
 
                     print(f"--- Resposta Bruta do Gemini (Hierárquico) ---\n{resposta_gemini}\n--------------------------------------------")
-                    gemini_html = render_markdown_cascata(resposta_gemini)
-                    if is_html_empty(gemini_html):
-                        gemini_html = f"<pre>{escape(gemini_html)}</pre>"
-                    yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento concluído!', 'partial_result': {'id': 'gemini-output', 'content': gemini_html}, 'done': True, 'mode': 'hierarchical'})}\n\n"
+                    # MUDANÇA: Envia o texto bruto em vez de HTML
+                    yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento concluído!', 'partial_result': {'id': 'gemini-output', 'content': resposta_gemini}, 'done': True, 'mode': 'hierarchical'})}\n\n"
 
             except Exception as e:
                 print(f"Ocorreu um erro durante o processamento: {e}")
@@ -267,11 +264,8 @@ def merge():
             print(f"--- Resposta Bruta do Merge (GROK) ---\n{resposta_merge}\n------------------------------------")
             word_count = len(resposta_merge.split())
             
-            merge_html = render_markdown_cascata(resposta_merge)
-            if is_html_empty(merge_html):
-                merge_html = f"<pre>{escape(resposta_merge)}</pre>"
-            
-            yield f"data: {json.dumps({'progress': 100, 'message': 'Merge concluído!', 'final_result': {'content': merge_html, 'word_count': word_count}, 'done': True})}\n\n"
+            # MUDANÇA: Envia o texto bruto do merge em vez de HTML
+            yield f"data: {json.dumps({'progress': 100, 'message': 'Merge concluído!', 'final_result': {'content': resposta_merge, 'word_count': word_count}, 'done': True})}\n\n"
 
         except Exception as e:
             print(f"Erro no processo de merge: {e}")
