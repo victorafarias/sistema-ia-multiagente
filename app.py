@@ -117,14 +117,19 @@ def process():
 
                     yield f"data: {json.dumps({'progress': 80, 'message': 'Todos os modelos responderam. Formatando saídas...'})}\n\n"
                     
-                    # ✅ MUDANÇA: Exibe texto bruto pré-formatado
+                    # GROK
                     grok_text = results.get('grok', '')
+                    print(f"--- Resposta Bruta do GROK (Atômico) ---\n{grok_text}\n--------------------------------------")
                     yield f"data: {json.dumps({'partial_result': {'id': 'grok-output', 'content': f'<pre>{escape(grok_text)}</pre>'}})}\n\n"
 
+                    # SONNET
                     sonnet_text = results.get('sonnet', '')
+                    print(f"--- Resposta Bruta do Sonnet (Atômico) ---\n{sonnet_text}\n----------------------------------------")
                     yield f"data: {json.dumps({'partial_result': {'id': 'sonnet-output', 'content': f'<pre>{escape(sonnet_text)}</pre>'}})}\n\n"
 
+                    # GEMINI
                     gemini_text = results.get('gemini', '')
+                    print(f"--- Resposta Bruta do Gemini (Atômico) ---\n{gemini_text}\n----------------------------------------")
                     yield f"data: {json.dumps({'partial_result': {'id': 'gemini-output', 'content': f'<pre>{escape(gemini_text)}</pre>'}})}\n\n"
                     
                     yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento Atômico concluído!', 'done': True, 'mode': 'atomic'})}\n\n"
@@ -140,7 +145,7 @@ def process():
                         yield f"data: {json.dumps({'error': 'Falha no serviço GROK: Sem resposta.'})}\n\n"
                         return
                     
-                    # ✅ MUDANÇA: Exibe texto bruto pré-formatado
+                    print(f"--- Resposta Bruta do GROK (Hierárquico) ---\n{resposta_grok}\n------------------------------------------")
                     yield f"data: {json.dumps({'progress': 33, 'message': 'Claude Sonnet está processando...', 'partial_result': {'id': 'grok-output', 'content': f'<pre>{escape(resposta_grok)}</pre>'}})}\n\n"
                     
                     prompt_sonnet = PromptTemplate(template=PROMPT_HIERARQUICO_SONNET, input_variables=["solicitacao_usuario", "texto_para_analise"])
@@ -152,7 +157,7 @@ def process():
                         yield f"data: {json.dumps({'error': 'Falha no serviço Claude Sonnet: Sem resposta.'})}\n\n"
                         return
 
-                    # ✅ MUDANÇA: Exibe texto bruto pré-formatado
+                    print(f"--- Resposta Bruta do Sonnet (Hierárquico) ---\n{resposta_sonnet}\n--------------------------------------------")
                     yield f"data: {json.dumps({'progress': 66, 'message': 'Gemini está processando...', 'partial_result': {'id': 'sonnet-output', 'content': f'<pre>{escape(resposta_sonnet)}</pre>'}})}\n\n"
                     
                     prompt_gemini = PromptTemplate(template=PROMPT_HIERARQUICO_GEMINI, input_variables=["solicitacao_usuario", "texto_para_analise"])
@@ -163,7 +168,7 @@ def process():
                         yield f"data: {json.dumps({'error': 'Falha no serviço Gemini: Sem resposta.'})}\n\n"
                         return
 
-                    # ✅ MUDANÇA: Exibe texto bruto pré-formatado
+                    print(f"--- Resposta Bruta do Gemini (Hierárquico) ---\n{resposta_gemini}\n--------------------------------------------")
                     yield f"data: {json.dumps({'progress': 100, 'message': 'Processamento concluído!', 'partial_result': {'id': 'gemini-output', 'content': f'<pre>{escape(resposta_gemini)}</pre>'}, 'done': True, 'mode': 'hierarchical'})}\n\n"
 
             except Exception as e:
@@ -199,7 +204,6 @@ def merge():
                 return
             
             word_count = len(resposta_merge.split())
-            # ✅ MUDANÇA: Exibe texto bruto pré-formatado
             merge_html = f"<pre>{escape(resposta_merge)}</pre>"
             
             yield f"data: {json.dumps({'progress': 100, 'message': 'Merge concluído!', 'final_result': {'content': merge_html, 'word_count': word_count}, 'done': True})}\n\n"
