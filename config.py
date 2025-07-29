@@ -46,6 +46,9 @@ PROMPT_HIERARQUICO_GROK = """
     6. Organize o conteúdo de forma lógica e progressiva
     7. Evite usar um estilo de escrita muito característico de textos gerados com IA, como por exemplo: "Não é mera..., mas é...". Coisas assim. Seja mais direto.
     8. Todo o texto, incluindo citações, devem estar na lingua Português do Brasil.
+
+    <forbidden>Que o texto tenha menos de {min_chars} caracteres.</forbidden>
+    <forbidden>Que o texto tenha mais de {max_chars} caracteres.</forbidden>    
   </instructions>
 </prompt>
 """
@@ -85,6 +88,10 @@ PROMPT_HIERARQUICO_SONNET = """
             <acao>corrigir imprecisões conceituais</acao>
             <acao>corrigir problemas argumentativos</acao>
         </correcoes>
+
+        <forbidden>Que o texto tenha menos de {min_chars} caracteres.</forbidden>
+        <forbidden>Que o texto tenha mais de {max_chars} caracteres.</forbidden>
+
     </instrucoes>
     
     <restricoes>
@@ -147,6 +154,10 @@ PROMPT_HIERARQUICO_GEMINI = """
             <acao>corrigir imprecisões conceituais</acao>
             <acao>corrigir problemas argumentativos</acao>
         </correcoes>
+
+        <forbidden>Que o texto tenha menos de {min_chars} caracteres.</forbidden>
+        <forbidden>Que o texto tenha mais de {max_chars} caracteres.</forbidden>
+
     </instrucoes>
     
     <restricoes>
@@ -214,6 +225,9 @@ PROMPT_ATOMICO_INICIAL = """
     6. Organize o conteúdo de forma lógica e progressiva
     7. Evite usar um estilo de escrita muito característico de textos gerados com IA, como por exemplo: "Não é mera..., mas é...". Coisas assim. Seja mais direto.
     8. Todo o texto, incluindo citações, devem estar na lingua Português do Brasil.
+
+    <forbidden>Que o texto tenha menos de {min_chars} caracteres.</forbidden>
+    <forbidden>Que o texto tenha mais de {max_chars} caracteres.</forbidden>
   </instructions>
 </prompt>
 """
@@ -252,8 +266,8 @@ PROMPT_ATOMICO_MERGE = """
     </structure>
 
     <caracters_count>
-        <minimum>24000</minimum>
-        <maximum>30000</maximum>
+        <minimum>{min_chars}</minimum>
+        <maximum>{max_chars}</maximum>
     </caracters_count>
 
     <analysis>
@@ -269,7 +283,7 @@ PROMPT_ATOMICO_MERGE = """
     </corrections>
 
     <expansion>
-      Não resuma ou reduza o texto: Seu objetivo é consolidar, expandir e aprofundar, nunca encurtar o texto. O resultado final deve ser uma versão mais completa e robusta do que os textos originais, e deve obedecer o mínimo de 24000 caracteres.
+      Não resuma ou reduza o texto: Seu objetivo é consolidar, expandir e aprofundar, nunca encurtar o texto. O resultado final deve ser uma versão mais completa e robusta do que os textos originais, e deve obedecer o mínimo de {min_chars} caracteres.
     </expansion>
 
     <style>
@@ -284,6 +298,9 @@ PROMPT_ATOMICO_MERGE = """
     <language>
       Verificar se todo o texto, incluindo citações, estão na lingua Português do Brasil. Traduza as que não estiverem.
     </language>
+
+    <forbidden>Que o texto tenha menos de {min_chars} caracteres.</forbidden>
+    <forbidden>Que o texto tenha mais de {max_chars} caracteres.</forbidden>
   </instructions>
 
   <output>
