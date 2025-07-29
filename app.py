@@ -243,10 +243,11 @@ def process():
                     claude_atomic_llm = claude_llm.bind(max_tokens=20000)
                     models = {'grok': grok_llm, 'sonnet': claude_atomic_llm, 'gemini': gemini_llm}
                     
-                    # Atualizar os prompts com os parâmetros de tamanho
+                    # Substituir os placeholders no template
                     updated_prompt_template = PROMPT_ATOMICO_INICIAL.replace(
-                        "<minimum>24000</minimum>\n        <maximum>30000</maximum>", 
-                        f"<minimum>{min_chars}</minimum>\n        <maximum>{max_chars}</maximum>"
+                        "MIN_CHARS_PLACEHOLDER", str(min_chars)
+                    ).replace(
+                        "MAX_CHARS_PLACEHOLDER", str(max_chars)
                     )
                     
                     prompt = PromptTemplate(template=updated_prompt_template, input_variables=["solicitacao_usuario", "rag_context"])
@@ -308,16 +309,21 @@ def process():
                     
                     # Atualizar prompts hierárquicos com parâmetros de tamanho
                     updated_grok_template = PROMPT_HIERARQUICO_GROK.replace(
-                        "<minimum>24000</minimum>\n        <maximum>30000</maximum>", 
-                        f"<minimum>{min_chars}</minimum>\n        <maximum>{max_chars}</maximum>"
+                        "MIN_CHARS_PLACEHOLDER", str(min_chars)
+                    ).replace(
+                        "MAX_CHARS_PLACEHOLDER", str(max_chars)
                     )
+                    
                     updated_sonnet_template = PROMPT_HIERARQUICO_SONNET.replace(
-                        "**Valide se o texto atingiu a quantidade de caracteres mínimas de 24000 e máxima de 30000 caracteres**.", 
-                        f"**Valide se o texto atingiu a quantidade de caracteres mínimas de {min_chars} e máxima de {max_chars} caracteres**."
+                        "MIN_CHARS_PLACEHOLDER", str(min_chars)
+                    ).replace(
+                        "MAX_CHARS_PLACEHOLDER", str(max_chars)
                     )
+                    
                     updated_gemini_template = PROMPT_HIERARQUICO_GEMINI.replace(
-                        "**Valide se o texto atingiu a quantidade de caracteres mínimas de 24000 e máxima de 30000 caracteres**.", 
-                        f"**Valide se o texto atingiu a quantidade de caracteres mínimas de {min_chars} e máxima de {max_chars} caracteres**."
+                        "MIN_CHARS_PLACEHOLDER", str(min_chars)
+                    ).replace(
+                        "MAX_CHARS_PLACEHOLDER", str(max_chars)
                     )
                     
                     json_data = safe_json_dumps({'progress': 15, 'message': 'O GROK está processando sua solicitação...'})
@@ -440,7 +446,15 @@ def merge():
                 return
             
             output_parser = StrOutputParser()
-            prompt_merge = PromptTemplate(template=PROMPT_ATOMICO_MERGE, input_variables=["solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
+            
+            # Atualizar o template de merge com os parâmetros de tamanho padrão
+            updated_merge_template = PROMPT_ATOMICO_MERGE.replace(
+                "MIN_CHARS_PLACEHOLDER", "24000"
+            ).replace(
+                "MAX_CHARS_PLACEHOLDER", "30000"
+            )
+            
+            prompt_merge = PromptTemplate(template=updated_merge_template, input_variables=["solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
             
             # MUDANÇA: Usar Claude Sonnet para o merge
             claude_with_max_tokens = claude_llm.bind(max_tokens=100000)

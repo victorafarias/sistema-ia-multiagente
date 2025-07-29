@@ -10,8 +10,8 @@ PROMPT_HIERARQUICO_GROK = """
 
   <requirements>
     <caracters_count>
-        <minimum>24000</minimum>
-        <maximum>30000</maximum>
+        <minimum>MIN_CHARS_PLACEHOLDER</minimum>
+        <maximum>MAX_CHARS_PLACEHOLDER</maximum>
     </caracters_count>
     <language>Português do Brasil</language>
     <paragraph_structure>Parágrafos curtos para facilitar a leitura</paragraph_structure>
@@ -47,8 +47,8 @@ PROMPT_HIERARQUICO_GROK = """
     7. Evite usar um estilo de escrita muito característico de textos gerados com IA, como por exemplo: "Não é mera..., mas é...". Coisas assim. Seja mais direto.
     8. Todo o texto, incluindo citações, devem estar na lingua Português do Brasil.
 
-    <forbidden>Que o texto tenha menos de {min_chars} caracteres.</forbidden>
-    <forbidden>Que o texto tenha mais de {max_chars} caracteres.</forbidden>    
+    <forbidden>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres.</forbidden>
+    <forbidden>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres.</forbidden>    
   </instructions>
 </prompt>
 """
@@ -64,8 +64,8 @@ PROMPT_HIERARQUICO_SONNET = """
     
     <tamanhoDoTexto>
         <caracteres>
-            <minimo>24000</minimo>
-            <maximo>30000</maximo>
+            <minimo>MIN_CHARS_PLACEHOLDER</minimo>
+            <maximo>MAX_CHARS_PLACEHOLDER</maximo>
         </caracteres>
     </tamanhoDoTexto>
     
@@ -89,8 +89,8 @@ PROMPT_HIERARQUICO_SONNET = """
             <acao>corrigir problemas argumentativos</acao>
         </correcoes>
 
-        <forbidden>Que o texto tenha menos de {min_chars} caracteres.</forbidden>
-        <forbidden>Que o texto tenha mais de {max_chars} caracteres.</forbidden>
+        <forbidden>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres.</forbidden>
+        <forbidden>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres.</forbidden>
 
     </instrucoes>
     
@@ -127,8 +127,8 @@ PROMPT_HIERARQUICO_GEMINI = """
     
     <tamanhoDoTexto>
         <caracteres>
-            <minimo>24000</minimo>
-            <maximo>30000</maximo>
+            <minimo>MIN_CHARS_PLACEHOLDER</minimo>
+            <maximo>MAX_CHARS_PLACEHOLDER</maximo>
         </caracteres>
     </tamanhoDoTexto>
     
@@ -155,8 +155,8 @@ PROMPT_HIERARQUICO_GEMINI = """
             <acao>corrigir problemas argumentativos</acao>
         </correcoes>
 
-        <forbidden>Que o texto tenha menos de {min_chars} caracteres.</forbidden>
-        <forbidden>Que o texto tenha mais de {max_chars} caracteres.</forbidden>
+        <forbidden>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres.</forbidden>
+        <forbidden>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres.</forbidden>
 
     </instrucoes>
     
@@ -192,8 +192,8 @@ PROMPT_ATOMICO_INICIAL = """
   </role>
   <requirements>
     <caracters_count>
-        <minimum>24000</minimum>
-        <maximum>30000</maximum>
+        <minimum>MIN_CHARS_PLACEHOLDER</minimum>
+        <maximum>MAX_CHARS_PLACEHOLDER</maximum>
     </caracters_count>
     <language>Português do Brasil</language>
     <paragraph_structure>Parágrafos curtos para facilitar a leitura</paragraph_structure>
@@ -226,8 +226,8 @@ PROMPT_ATOMICO_INICIAL = """
     7. Evite usar um estilo de escrita muito característico de textos gerados com IA, como por exemplo: "Não é mera..., mas é...". Coisas assim. Seja mais direto.
     8. Todo o texto, incluindo citações, devem estar na lingua Português do Brasil.
 
-    <forbidden>Que o texto tenha menos de {min_chars} caracteres.</forbidden>
-    <forbidden>Que o texto tenha mais de {max_chars} caracteres.</forbidden>
+    <forbidden>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres.</forbidden>
+    <forbidden>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres.</forbidden>
   </instructions>
 </prompt>
 """
@@ -266,8 +266,8 @@ PROMPT_ATOMICO_MERGE = """
     </structure>
 
     <caracters_count>
-        <minimum>{min_chars}</minimum>
-        <maximum>{max_chars}</maximum>
+        <minimum>MIN_CHARS_PLACEHOLDER</minimum>
+        <maximum>MAX_CHARS_PLACEHOLDER</maximum>
     </caracters_count>
 
     <analysis>
@@ -299,8 +299,8 @@ PROMPT_ATOMICO_MERGE = """
       Verificar se todo o texto, incluindo citações, estão na lingua Português do Brasil. Traduza as que não estiverem.
     </language>
 
-    <forbidden>Que o texto tenha menos de {min_chars} caracteres.</forbidden>
-    <forbidden>Que o texto tenha mais de {max_chars} caracteres.</forbidden>
+    <forbidden>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres.</forbidden>
+    <forbidden>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres.</forbidden>
   </instructions>
 
   <output>
