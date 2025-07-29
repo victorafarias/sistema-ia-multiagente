@@ -430,6 +430,12 @@ def merge():
     processing_cancelled = False  # Reset do flag
     
     data = request.get_json()
+    
+    # Extrair parâmetros que faltavam no scope do merge
+    contexto = data.get('contexto', '')
+    min_chars = int(data.get('min_chars', 24000))
+    max_chars = int(data.get('max_chars', 30000))
+    
     log_print("=== ROTA MERGE ACESSADA ===")
     log_print("=== USANDO CLAUDE SONNET PARA MERGE ===")
     
