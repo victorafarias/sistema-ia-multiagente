@@ -89,6 +89,7 @@ PROMPT_HIERARQUICO_SONNET = """
     
     <restricoes>
         <proibido>fazer reduções do texto</proibido>
+        <proibido>elaborar um texto com mais de 30000 caracteres</proibido>
         <proibido>fazer resumos</proibido>
         <proibido>encurtar o conteúdo original</proibido>
         <proibido>usar expressões características de IA como "Não é mera..., mas é..."</proibido>
@@ -152,6 +153,7 @@ PROMPT_HIERARQUICO_GEMINI = """
         <proibido>fazer reduções do texto</proibido>
         <proibido>fazer resumos</proibido>
         <proibido>encurtar o conteúdo original</proibido>
+        <proibido>elaborar um texto com mais de 30000 caracteres</proibido>
         <proibido>usar expressões características de IA como "Não é mera..., mas é..."</proibido>
     </restricoes>
     

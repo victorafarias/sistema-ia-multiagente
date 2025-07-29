@@ -276,6 +276,18 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                 // Processa qualquer dado restante no buffer
                 if (buffer.trim()) {
                     debugLog(`Buffer final: ${buffer}`);
+                    // Tenta processar o buffer final como uma linha completa
+                    if (buffer.startsWith('data: ')) {
+                        const jsonData = buffer.substring(6).trim();
+                        if (jsonData) {
+                            try {
+                                const data = JSON.parse(jsonData);
+                                processStreamData(data, false);
+                            } catch (e) {
+                                console.error("Erro ao parsear JSON do buffer final:", jsonData.substring(0, 200));
+                            }
+                        }
+                    }
                 }
 
             } catch (error) {
@@ -301,7 +313,7 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                 sonnet_text: rawTexts['sonnet-output'] || '',
                 gemini_text: rawTexts['gemini-output'] || '',
             };
-            debugLog(`Payload do merge: ${JSON.stringify({...payload, grok_length: payload.grok_text.length, sonnet_length: payload.sonnet_text.length, gemini_length: payload.gemini_text.length})}`);
+            debugLog(`Payload do merge preparado com textos de tamanho: G=${payload.grok_text.length}, S=${payload.sonnet_text.length}, G=${payload.gemini_text.length}`);
 
             try {
                 const response = await fetch('/merge', {
@@ -311,25 +323,62 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                 });
                 if (!response.ok || !response.body) throw new Error(`Erro na resposta do servidor: ${response.statusText}`);
                 
+                debugLog("=== MERGE FETCH REALIZADO COM SUCESSO, INICIANDO STREAM ===");
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
+                let buffer = ''; // Buffer para dados incompletos do merge
+
                 while (true) {
                     const { done, value } = await reader.read();
-                    if (done) break;
+                    if (done) {
+                        debugLog("=== MERGE STREAM FINALIZADO ===");
+                        break;
+                    }
+                    
                     const chunk = decoder.decode(value, { stream: true });
-                    const lines = chunk.split('\n\n');
+                    buffer += chunk;
+                    debugLog(`Merge chunk recebido: ${chunk.length} chars`);
+                    
+                    // Processa todas as linhas completas no buffer
+                    let lines = buffer.split('\n\n');
+                    buffer = lines.pop(); // Mantém a última linha (possivelmente incompleta) no buffer
+                    
                     lines.forEach(line => {
                         if (line.startsWith('data: ')) {
-                            const jsonData = line.substring(6);
-                            if (jsonData.trim()) {
+                            const jsonData = line.substring(6).trim();
+                            if (jsonData) {
+                                debugLog(`Merge JSON recebido: ${jsonData.substring(0, 200)}...`);
                                 try {
                                     const data = JSON.parse(jsonData);
+                                    debugLog(`Merge dados processados: ${JSON.stringify({progress: data.progress, message: data.message, hasFinalResult: !!data.final_result, error: data.error})}`);
                                     processStreamData(data, true); // true = é merge
-                                } catch (e) { console.error("Erro ao parsear JSON do merge:", jsonData); }
+                                } catch (e) {
+                                    console.error("Erro ao parsear JSON do merge:", jsonData.substring(0, 500));
+                                    console.error("Erro:", e);
+                                }
                             }
                         }
                     });
                 }
+
+                // Processa qualquer dado restante no buffer do merge
+                if (buffer.trim()) {
+                    debugLog(`Merge buffer final: ${buffer.substring(0, 200)}...`);
+                    if (buffer.startsWith('data: ')) {
+                        const jsonData = buffer.substring(6).trim();
+                        if (jsonData) {
+                            try {
+                                const data = JSON.parse(jsonData);
+                                debugLog("Processando buffer final do merge");
+                                processStreamData(data, true);
+                            } catch (e) {
+                                console.error("Erro ao parsear JSON do merge buffer final:", jsonData.substring(0, 500));
+                                console.error("Erro:", e);
+                            }
+                        }
+                    }
+                }
+
             } catch (error) {
                 debugLog(`ERRO NO MERGE: ${error.message}`);
                 showError("A conexão falhou ao tentar processar o merge.");
@@ -467,5 +516,6 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
             }
         }
     </script>
+
 </body>
 </html>
