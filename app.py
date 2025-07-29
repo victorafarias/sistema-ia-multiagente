@@ -449,9 +449,9 @@ def merge():
             
             # Atualizar o template de merge com os parâmetros de tamanho padrão
             updated_merge_template = PROMPT_ATOMICO_MERGE.replace(
-                "MIN_CHARS_PLACEHOLDER", "24000"
+                "MIN_CHARS_PLACEHOLDER", str(min_chars)
             ).replace(
-                "MAX_CHARS_PLACEHOLDER", "30000"
+                "MAX_CHARS_PLACEHOLDER", str(max_chars)
             )
             
             prompt_merge = PromptTemplate(template=updated_merge_template, input_variables=["solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])

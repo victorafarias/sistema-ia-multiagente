@@ -39,25 +39,12 @@
             margin-bottom: 0;
         }
         
-        #final-result-container {
-            display: none;
-            width: 100%;
-            margin-top: 20px;
-        }
-        
         .results-container .result-column {
             flex: 1;
             min-width: 0;
         }
 
         /* ESTILOS RESPONSIVOS */
-        
-        /* Container principal */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 10px;
-        }
         
         /* Header responsivo */
         .header-container {
@@ -216,15 +203,14 @@
             background-color: #218838;
         }
         
-        /* Output boxes responsivos */
+        /* Output boxes responsivos - SEM BARRA DE ROLAGEM INDIVIDUAL */
         .output-box {
             padding: 15px;
             border: 1px solid #dee2e6;
             border-top: none;
             background-color: #ffffff;
             min-height: 300px;
-            max-height: 600px;
-            overflow-y: auto;
+            /* REMOVIDO: max-height e overflow-y */
             font-size: 14px;
             line-height: 1.6;
             word-wrap: break-word;
@@ -318,6 +304,7 @@
             
             .switch {
                 transform: scale(1.2);
+                margin-right: 37px;
             }
             
             .refresh-btn {
@@ -364,7 +351,7 @@
             .output-box {
                 font-size: 16px;
                 padding: 12px;
-                max-height: 400px;
+                /* REMOVIDO: max-height */
             }
             
             .cancel-btn {
@@ -416,7 +403,7 @@
             .output-box {
                 padding: 10px;
                 font-size: 14px;
-                max-height: 300px;
+                /* REMOVIDO: max-height */
             }
             
             .floating-merge-btn {
@@ -429,9 +416,7 @@
 
         /* Ajustes para modo landscape em mobile */
         @media (max-height: 500px) and (orientation: landscape) {
-            .output-box {
-                max-height: 200px;
-            }
+            /* REMOVIDO: ajuste de max-height dos output-box */
             
             .loader-content {
                 padding: 10px;
