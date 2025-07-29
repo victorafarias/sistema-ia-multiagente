@@ -210,7 +210,7 @@ def process():
                 log_print("=== INICIANDO PROCESSAMENTO REAL ===")
                 json_data = safe_json_dumps({'progress': 0, 'message': 'Processando arquivos e extraindo contexto...'})
                 yield f"data: {json_data}\n\n"
-                rag_context = get_relevant_context(file_paths, solicitacao_usuario)
+                rag_context = get_relevant_context(file_paths, solicitacao_usuario) #erro
                 log_print(f"=== RAG CONTEXT OBTIDO: {len(rag_context)} chars ===")
                 
                 output_parser = StrOutputParser()
