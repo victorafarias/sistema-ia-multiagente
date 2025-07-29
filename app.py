@@ -187,6 +187,7 @@ def process():
         log_print(f"=== GENERATE_STREAM INICIADO - Mode: {current_mode} ===")
         
         solicitacao_usuario = form_data.get('solicitacao', '')
+        contexto = form_data.get('contexto', '')
         
         if current_mode == 'test':
             log_print("=== MODO TESTE EXECUTADO ===")
@@ -209,7 +210,7 @@ def process():
                 log_print("=== INICIANDO PROCESSAMENTO REAL ===")
                 json_data = safe_json_dumps({'progress': 0, 'message': 'Processando arquivos e extraindo contexto...'})
                 yield f"data: {json_data}\n\n"
-                rag_context = get_relevant_context(file_paths, solicitacao_usuario)
+                rag_context = get_relevant_context(file_paths, solicitacao_usuario, contexto)
                 log_print(f"=== RAG CONTEXT OBTIDO: {len(rag_context)} chars ===")
                 
                 output_parser = StrOutputParser()
@@ -251,7 +252,7 @@ def process():
                         "MAX_CHARS_PLACEHOLDER", str(max_chars)
                     ).replace("<role>", f"<role>\n    {contexto}") #injeta contexto
                     
-                    prompt = PromptTemplate(template=updated_prompt_template, input_variables=["solicitacao_usuario", "rag_context"])
+                    prompt = PromptTemplate(template=updated_prompt_template, input_variables=["contexto", "solicitacao_usuario", "rag_context"])
                     json_data = safe_json_dumps({'progress': 15, 'message': 'Iniciando processamento paralelo...'})
                     yield f"data: {json_data}\n\n"
                     
@@ -262,7 +263,7 @@ def process():
                             return
                             
                         chain = prompt | llm | output_parser
-                        thread = threading.Thread(target=run_chain_with_timeout, args=(chain, {"solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context}, name))
+                        thread = threading.Thread(target=run_chain_with_timeout, args=(chain, {"contexto": contexto, "solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context}, name))
                         threads.append(thread)
                         thread.start()
 
@@ -336,9 +337,9 @@ def process():
                         return
                     
                     log_print("=== PROCESSANDO GROK ===")
-                    prompt_grok = PromptTemplate(template=updated_grok_template, input_variables=["solicitacao_usuario", "rag_context"])
+                    prompt_grok = PromptTemplate(template=updated_grok_template, input_variables=["contexto", "solicitacao_usuario", "rag_context"])
                     chain_grok = prompt_grok | grok_llm | output_parser
-                    resposta_grok = chain_grok.invoke({"solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context})
+                    resposta_grok = chain_grok.invoke({"contexto": contexto, "solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context})
                     
                     log_print(f"=== GROK TERMINOU: {len(resposta_grok)} chars ===")
                     
@@ -363,10 +364,10 @@ def process():
                         return
                     
                     log_print("=== PROCESSANDO SONNET ===")
-                    prompt_sonnet = PromptTemplate(template=updated_sonnet_template, input_variables=["solicitacao_usuario", "texto_para_analise"])
+                    prompt_sonnet = PromptTemplate(template=updated_sonnet_template, input_variables=["contexto", "solicitacao_usuario", "texto_para_analise"])
                     claude_with_max_tokens = claude_llm.bind(max_tokens=20000)
                     chain_sonnet = prompt_sonnet | claude_with_max_tokens | output_parser
-                    resposta_sonnet = chain_sonnet.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_grok})
+                    resposta_sonnet = chain_sonnet.invoke({"contexto": contexto, "solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_grok})
                     
                     log_print(f"=== SONNET TERMINOU: {len(resposta_sonnet)} chars ===")
                     
@@ -391,9 +392,9 @@ def process():
                         return
                     
                     log_print("=== PROCESSANDO GEMINI ===")
-                    prompt_gemini = PromptTemplate(template=updated_gemini_template, input_variables=["solicitacao_usuario", "texto_para_analise"])
+                    prompt_gemini = PromptTemplate(template=updated_gemini_template, input_variables=["contexto", "solicitacao_usuario", "texto_para_analise"])
                     chain_gemini = prompt_gemini | gemini_llm | output_parser
-                    resposta_gemini = chain_gemini.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_sonnet})
+                    resposta_gemini = chain_gemini.invoke({"contexto": contexto, "solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_sonnet})
                     
                     log_print(f"=== GEMINI TERMINOU: {len(resposta_gemini)} chars ===")
                     
@@ -455,7 +456,7 @@ def merge():
                 "MAX_CHARS_PLACEHOLDER", str(max_chars)
             ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
             
-            prompt_merge = PromptTemplate(template=updated_merge_template, input_variables=["solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
+            prompt_merge = PromptTemplate(template=updated_merge_template, input_variables=["contexto", "solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
             
             # MUDANÇA: Usar Claude Sonnet para o merge
             claude_with_max_tokens = claude_llm.bind(max_tokens=64000)
@@ -471,6 +472,7 @@ def merge():
                 return
 
             resposta_merge = chain_merge.invoke({
+                "contexto": data.get('contexto'), 
                 "solicitacao_usuario": data.get('solicitacao_usuario'),
                 "texto_para_analise_grok": data.get('grok_text'),
                 "texto_para_analise_sonnet": data.get('sonnet_text'),
