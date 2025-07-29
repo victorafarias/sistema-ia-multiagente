@@ -10,12 +10,12 @@
         .convert-btn {
             padding: 5px 10px;
             font-size: 12px;
-            background-color: #17a2b8; /* Cor Ciano/Azul claro */
+            background-color: #17a2b8;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            margin-left: 5px; /* Espaço entre os botões */
+            margin-left: 5px;
         }
         .convert-btn:hover {
             background-color: #138496;
@@ -33,25 +33,80 @@
         }
         
         .results-container {
-            display: none; /* Será alterado via JavaScript */
+            display: none;
             flex-direction: row;
             gap: 10px;
             margin-bottom: 0;
         }
         
         #final-result-container {
-            display: none; /* Será alterado via JavaScript */
+            display: none;
             width: 100%;
             margin-top: 20px;
         }
         
-        /* Garantir que as 3 colunas principais mantenham o layout original */
         .results-container .result-column {
             flex: 1;
             min-width: 0;
         }
-        
 
+        /* Estilos para os campos de tamanho do texto */
+        .text-size-controls {
+            display: flex;
+            gap: 15px;
+            margin: 10px 0;
+            align-items: center;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+        }
+
+        .text-size-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .text-size-field label {
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: bold;
+        }
+
+        .text-size-field input {
+            width: 80px;
+            padding: 5px 8px;
+            border: 1px solid #ced4da;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+
+        /* Estilo para o botão de cancelar */
+        .cancel-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .cancel-btn:hover {
+            background-color: #c82333;
+        }
+
+        .cancel-btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        /* Ajuste no loader para acomodar o botão de cancelar */
+        .loader-content {
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -60,6 +115,7 @@
             <div class="loader-spinner"></div>
             <p id="loader-message">Processando sua solicitação...</p>
             <div class="progress-bar-container"><div id="progress-bar" class="progress-bar"></div></div>
+            <button id="cancel-btn" class="cancel-btn">Cancelar Processamento</button>
         </div>
     </div>
     <button id="merge-btn" class="floating-merge-btn" style="display: none;">Processar Merge</button>
@@ -70,7 +126,7 @@
                 <p id="flow-description">GROK ➔ Claude Sonnet ➔ Gemini</p>
             </div>
             <div class="controls-container">
-                <div class="mode-toggle" title="A versão 'Hierárquica' gerará um único no texto que passará por revisão em duas instâncias. Na versão 'Atômica', serão gerados 3 textos, um em cada modelo de IA; e depois um 4º texto será gerado fazendo um texto final consolidado dessas 3 versões.">
+                <div class="mode-toggle" title="A versão 'Hierárquica' gerará um único texto que passará por revisão em duas instâncias. Na versão 'Atômica', serão gerados 3 textos, um em cada modelo de IA; e depois um 4º texto será gerado fazendo um texto final consolidado dessas 3 versões.">
                     <span>Hierárquico</span>
                     <label class="switch"><input type="checkbox" id="processing-mode-switch"><span class="slider round"></span></label>
                     <span>Atômico</span>
@@ -89,6 +145,22 @@
                 <label for="solicitacao_usuario">Digite sua solicitação (ou arraste arquivos aqui):</label>
                 <textarea name="solicitacao_usuario" id="solicitacao_usuario" rows="8" required></textarea>
                 <div id="file-list-container"><p>Arquivos Anexados:</p><ul id="file-list"></ul></div>
+                
+                <!-- NOVOS CAMPOS: Controle de tamanho do texto -->
+                <div class="text-size-controls">
+                    <div class="text-size-field">
+                        <label for="min_chars">Mín. Caracteres:</label>
+                        <input type="number" id="min_chars" name="min_chars" value="24000" min="1000" max="100000" step="1000">
+                    </div>
+                    <div class="text-size-field">
+                        <label for="max_chars">Máx. Caracteres:</label>
+                        <input type="number" id="max_chars" name="max_chars" value="30000" min="1000" max="100000" step="1000">
+                    </div>
+                    <div style="font-size: 12px; color: #6c757d; max-width: 300px;">
+                        <strong>Dica:</strong> Defina o tamanho desejado para os textos gerados pelas IAs. Valores maiores resultam em textos mais detalhados.
+                    </div>
+                </div>
+
                 <button type="submit">Processar com IA</button>
             </form>
         </div>
@@ -153,6 +225,7 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
             </div>
         </div>
     </div>
+    
     <script>
         // --- Variáveis Globais ---
         const processingModeSwitch = document.getElementById('processing-mode-switch');
@@ -169,9 +242,11 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
         const mergeBtn = document.getElementById('merge-btn');
         const finalResultContainer = document.getElementById('final-result-container');
         const finalOutput = document.getElementById('final-output');
+        const cancelBtn = document.getElementById('cancel-btn');
         let attachedFiles = [];
         let originalUserQuery = "";
-        let rawTexts = {}; // NOVO: Objeto para guardar os textos brutos
+        let rawTexts = {};
+        let currentProcessingType = null; // 'main' ou 'merge'
 
         // Log para debug
         function debugLog(message) {
@@ -183,8 +258,56 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
             realContainer.style.display = this.checked ? 'none' : 'block';
             mockContainer.style.display = this.checked ? 'block' : 'none';
         });
+        
         processingModeSwitch.addEventListener('change', function() {
-            document.getElementById('flow-description').textContent = this.checked ? "GROK | Claude Sonnet | Gemini (Paralelo)" : "GROK ➔ Claude Sonnet ➔ Gemini";
+            const isAtomic = this.checked;
+            document.getElementById('flow-description').textContent = isAtomic ? 
+                "GROK | Claude Sonnet | Gemini (Paralelo)" : 
+                "GROK ➔ Claude Sonnet ➔ Gemini";
+        });
+
+        // --- Lógica do botão de cancelar ---
+        cancelBtn.addEventListener('click', async function() {
+            debugLog("=== CANCELAR BUTTON CLICADO ===");
+            
+            try {
+                const response = await fetch('/cancel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    debugLog("Cancelamento solicitado com sucesso");
+                    loaderMessage.textContent = 'Cancelando processamento...';
+                    cancelBtn.disabled = true;
+                    cancelBtn.textContent = 'Cancelando...';
+                } else {
+                    debugLog("Erro ao solicitar cancelamento");
+                    showError("Erro ao cancelar processamento.");
+                }
+            } catch (error) {
+                debugLog(`Erro no cancelamento: ${error.message}`);
+                showError("Erro ao cancelar processamento.");
+            }
+        });
+
+        // --- Validação dos campos de tamanho ---
+        document.getElementById('min_chars').addEventListener('change', function() {
+            const minValue = parseInt(this.value);
+            const maxValue = parseInt(document.getElementById('max_chars').value);
+            
+            if (minValue >= maxValue) {
+                document.getElementById('max_chars').value = minValue + 1000;
+            }
+        });
+
+        document.getElementById('max_chars').addEventListener('change', function() {
+            const maxValue = parseInt(this.value);
+            const minValue = parseInt(document.getElementById('min_chars').value);
+            
+            if (maxValue <= minValue) {
+                document.getElementById('min_chars').value = maxValue - 1000;
+            }
         });
         
         // --- Lógica de Upload ---
@@ -228,6 +351,7 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
         async function handleFormSubmit(event) {
             event.preventDefault();
             debugLog("=== FORM SUBMIT INICIADO ===");
+            currentProcessingType = 'main';
 
             // Resetar a interface
             errorContainer.innerHTML = '';
@@ -239,17 +363,23 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                 btn.disabled = false;
                 btn.innerText = 'Converter para MD';
             });
-            rawTexts = {}; // Limpa os textos brutos
+            rawTexts = {};
             debugLog("Interface resetada");
 
             // Iniciar o loader
             loaderMessage.textContent = 'Iniciando conexão...';
             progressBar.style.width = '0%';
             loader.style.display = 'flex';
+            cancelBtn.disabled = false;
+            cancelBtn.textContent = 'Cancelar Processamento';
             debugLog("Loader iniciado");
 
             const formData = new FormData();
             formData.append('processing_mode', processingModeSwitch.checked ? 'atomic' : 'hierarchical');
+            
+            // Adicionar parâmetros de tamanho
+            formData.append('min_chars', document.getElementById('min_chars').value);
+            formData.append('max_chars', document.getElementById('max_chars').value);
             
             if (modeSwitch.checked) {
                 formData.append('mode', 'test');
@@ -272,7 +402,7 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                 debugLog("=== FETCH REALIZADO COM SUCESSO, INICIANDO STREAM ===");
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
-                let buffer = ''; // Buffer para dados incompletos
+                let buffer = '';
 
                 while (true) {
                     const { done, value } = await reader.read();
@@ -285,9 +415,8 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                     buffer += chunk;
                     debugLog(`Chunk recebido: ${chunk.length} chars`);
                     
-                    // Processa todas as linhas completas no buffer
                     let lines = buffer.split('\n\n');
-                    buffer = lines.pop(); // Mantém a última linha (possivelmente incompleta) no buffer
+                    buffer = lines.pop();
                     
                     lines.forEach(line => {
                         if (line.startsWith('data: ')) {
@@ -307,10 +436,8 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                     });
                 }
 
-                // Processa qualquer dado restante no buffer
                 if (buffer.trim()) {
                     debugLog(`Buffer final: ${buffer}`);
-                    // Tenta processar o buffer final como uma linha completa
                     if (buffer.startsWith('data: ')) {
                         const jsonData = buffer.substring(6).trim();
                         if (jsonData) {
@@ -335,12 +462,15 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
         // --- Lógica do Botão de Merge ---
         mergeBtn.addEventListener('click', async function() {
             debugLog("=== MERGE BUTTON CLICADO ===");
+            currentProcessingType = 'merge';
+            
             loaderMessage.textContent = 'Processando o merge dos textos...';
             progressBar.style.width = '0%';
             loader.style.display = 'flex';
+            cancelBtn.disabled = false;
+            cancelBtn.textContent = 'Cancelar Processamento';
             this.style.display = 'none';
 
-            // Sempre pega o texto bruto para o merge
             const payload = {
                 solicitacao_usuario: originalUserQuery,
                 grok_text: rawTexts['grok-output'] || '',
@@ -360,7 +490,7 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                 debugLog("=== MERGE FETCH REALIZADO COM SUCESSO, INICIANDO STREAM ===");
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
-                let buffer = ''; // Buffer para dados incompletos do merge
+                let buffer = '';
 
                 while (true) {
                     const { done, value } = await reader.read();
@@ -373,9 +503,8 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                     buffer += chunk;
                     debugLog(`Merge chunk recebido: ${chunk.length} chars`);
                     
-                    // Processa todas as linhas completas no buffer
                     let lines = buffer.split('\n\n');
-                    buffer = lines.pop(); // Mantém a última linha (possivelmente incompleta) no buffer
+                    buffer = lines.pop();
                     
                     lines.forEach(line => {
                         if (line.startsWith('data: ')) {
@@ -385,7 +514,7 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                                 try {
                                     const data = JSON.parse(jsonData);
                                     debugLog(`Merge dados processados: ${JSON.stringify({progress: data.progress, message: data.message, hasFinalResult: !!data.final_result, error: data.error})}`);
-                                    processStreamData(data, true); // true = é merge
+                                    processStreamData(data, true);
                                 } catch (e) {
                                     console.error("Erro ao parsear JSON do merge:", jsonData.substring(0, 500));
                                     console.error("Erro:", e);
@@ -395,7 +524,6 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                     });
                 }
 
-                // Processa qualquer dado restante no buffer do merge
                 if (buffer.trim()) {
                     debugLog(`Merge buffer final: ${buffer.substring(0, 200)}...`);
                     if (buffer.startsWith('data: ')) {
@@ -452,9 +580,8 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                     return;
                 }
 
-                // Armazena o texto bruto e exibe na tela
                 rawTexts[targetId] = content;
-                targetBox.innerText = content; // Exibe texto bruto
+                targetBox.innerText = content;
                 debugLog(`Conteúdo armazenado e exibido para: ${targetId}`);
 
                 if (targetId === 'final-output') {
@@ -465,6 +592,15 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                     }
                     finalResultContainer.style.display = 'block';
                     debugLog("Final result container exibido");
+                    
+                    // MELHORIA 4: Scroll automático para o texto final
+                    setTimeout(() => {
+                        finalResultContainer.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'start' 
+                        });
+                        debugLog("Scroll automático para texto final executado");
+                    }, 500);
                 } else {
                     resultsContainer.style.display = 'flex';
                     debugLog("Results container exibido");
@@ -491,7 +627,7 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
             }
         }
 
-        // --- Funções de Utilitários (ATUALIZADAS) ---
+        // --- Funções de Utilitários ---
         function showError(message) {
             debugLog(`Exibindo erro: ${message}`);
             errorContainer.innerHTML = `<div class="error-box"><strong>Erro:</strong> ${message}<span class="close-btn-error" onclick="this.parentElement.style.display='none';" title="Fechar">&times;</span></div>`;
@@ -499,7 +635,6 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
 
         function copyToClipboard(elementId) {
             debugLog(`Copiando conteúdo de: ${elementId}`);
-            // Sempre copia o texto bruto original do objeto rawTexts
             const textToCopy = rawTexts[elementId];
             if (textToCopy !== undefined) {
                 navigator.clipboard.writeText(textToCopy).then(() => {
@@ -512,7 +647,6 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
             }
         }
 
-        // NOVA FUNÇÃO para converter para Markdown sob demanda
         async function convertToMarkdown(elementId) {
             debugLog(`Convertendo markdown para: ${elementId}`);
             const button = event.target;
@@ -538,18 +672,17 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
 
                 const data = await response.json();
                 const targetBox = document.getElementById(elementId);
-                targetBox.innerHTML = data.html; // Insere o HTML convertido
-                button.innerText = 'Convertido'; // Mantém o botão desabilitado para indicar sucesso
+                targetBox.innerHTML = data.html;
+                button.innerText = 'Convertido';
                 debugLog(`Markdown convertido com sucesso para ${elementId}`);
             } catch (error) {
                 showError('Não foi possível converter o texto.');
                 console.error('Conversion error:', error);
                 debugLog(`Erro na conversão: ${error.message}`);
-                button.innerText = 'Converter para MD'; // Reabilita em caso de erro
+                button.innerText = 'Converter para MD';
                 button.disabled = false;
             }
         }
     </script>
-
 </body>
 </html>
