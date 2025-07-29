@@ -148,15 +148,14 @@ PROMPT_HIERARQUICO_GEMINI = """
         <instrucao>
         <step>Garantia de Qualidade:</step>
         <description>Assegure que o texto final atende a todos os requisitos da solicitação original do usuário de forma exemplar.</description>
+        <step>Conteúdo do Texto:</step>
+        <description>Retorne apenas o texto, sem comentários introdutórios ou de qualquer tipo.</description>
         </instrucao>
         
         <correcoes>
             <acao>corrigir imprecisões conceituais</acao>
             <acao>corrigir problemas argumentativos</acao>
         </correcoes>
-
-        <forbidden>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres.</forbidden>
-        <forbidden>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres.</forbidden>
 
     </instrucoes>
     
@@ -166,6 +165,8 @@ PROMPT_HIERARQUICO_GEMINI = """
         <proibido>encurtar o conteúdo original</proibido>
         <proibido>elaborar um texto com mais de 30000 caracteres</proibido>
         <proibido>usar expressões características de IA como "Não é mera..., mas é..."</proibido>
+        <proibido>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres.</proibido>
+        <proibido>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres.</proibido>
     </restricoes>
     
     <requisitos>
