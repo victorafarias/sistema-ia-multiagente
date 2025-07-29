@@ -425,6 +425,6 @@ textarea.drag-over {
 
 #final-result-container {
     display: none;
-    width: 100%; /* Ocupa toda a largura */
+    width: 65%; /* Ocupa toda a largura */
     margin-top: 20px;
 }
