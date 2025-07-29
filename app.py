@@ -41,6 +41,9 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 # Instancia o conversor de Markdown
 md = MarkdownIt()
 
+# Variável global para controle de interrupção
+processing_cancelled = False
+
 def log_print(message):
     """Função para garantir que os logs apareçam no container"""
     print(f"[DEBUG] {message}", flush=True)
@@ -127,6 +130,14 @@ def convert():
     converted_html = render_markdown_cascata(text_to_convert)
     return jsonify({'html': converted_html})
 
+# NOVA ROTA: Para cancelar processamento
+@app.route('/cancel', methods=['POST'])
+def cancel():
+    global processing_cancelled
+    processing_cancelled = True
+    log_print("=== PROCESSAMENTO CANCELADO PELO USUÁRIO ===")
+    return jsonify({'status': 'cancelled'})
+
 # NOVA ROTA: Para obter o conteúdo completo do merge
 @app.route('/get-full-content', methods=['POST'])
 def get_full_content():
@@ -142,6 +153,9 @@ def get_full_content():
 @app.route('/process', methods=['POST'])
 def process():
     """Processa a solicitação do usuário nos modos Hierárquico ou Atômico."""
+    global processing_cancelled
+    processing_cancelled = False  # Reset do flag de cancelamento
+    
     log_print("=== ROTA PROCESS ACESSADA ===")
     
     form_data = request.form
@@ -149,7 +163,12 @@ def process():
     mode = form_data.get('mode', 'real')
     processing_mode = form_data.get('processing_mode', 'hierarchical')
     
+    # NOVOS PARÂMETROS: Tamanho do texto
+    min_chars = int(form_data.get('min_chars', 24000))
+    max_chars = int(form_data.get('max_chars', 30000))
+    
     log_print(f"Mode: {mode}, Processing: {processing_mode}")
+    log_print(f"Tamanho solicitado: {min_chars} - {max_chars} caracteres")
     
     temp_file_paths = []
     if mode == 'real':
@@ -162,6 +181,8 @@ def process():
 
     def generate_stream(current_mode, form_data, file_paths):
         """Gera a resposta em streaming para o front-end."""
+        global processing_cancelled
+        
         log_print(f"=== GENERATE_STREAM INICIADO - Mode: {current_mode} ===")
         
         solicitacao_usuario = form_data.get('solicitacao', '')
@@ -200,13 +221,17 @@ def process():
                     
                     def run_chain_with_timeout(chain, inputs, key, timeout=300):
                         def task():
+                            if processing_cancelled:
+                                return "CANCELLED"
                             return chain.invoke(inputs)
                         
                         with concurrent.futures.ThreadPoolExecutor() as executor:
                             future = executor.submit(task)
                             try:
                                 result = future.result(timeout=timeout)
-                                if not result or not result.strip():
+                                if result == "CANCELLED":
+                                    results[key] = "CANCELLED"
+                                elif not result or not result.strip():
                                     results[key] = "Error:EmptyResponse"
                                 else:
                                     results[key] = result
@@ -218,11 +243,22 @@ def process():
                     claude_atomic_llm = claude_llm.bind(max_tokens=20000)
                     models = {'grok': grok_llm, 'sonnet': claude_atomic_llm, 'gemini': gemini_llm}
                     
-                    prompt = PromptTemplate(template=PROMPT_ATOMICO_INICIAL, input_variables=["solicitacao_usuario", "rag_context"])
+                    # Atualizar os prompts com os parâmetros de tamanho
+                    updated_prompt_template = PROMPT_ATOMICO_INICIAL.replace(
+                        "<minimum>24000</minimum>\n        <maximum>30000</maximum>", 
+                        f"<minimum>{min_chars}</minimum>\n        <maximum>{max_chars}</maximum>"
+                    )
+                    
+                    prompt = PromptTemplate(template=updated_prompt_template, input_variables=["solicitacao_usuario", "rag_context"])
                     json_data = safe_json_dumps({'progress': 15, 'message': 'Iniciando processamento paralelo...'})
                     yield f"data: {json_data}\n\n"
                     
                     for name, llm in models.items():
+                        if processing_cancelled:
+                            json_data = safe_json_dumps({'error': 'Processamento cancelado pelo usuário.'})
+                            yield f"data: {json_data}\n\n"
+                            return
+                            
                         chain = prompt | llm | output_parser
                         thread = threading.Thread(target=run_chain_with_timeout, args=(chain, {"solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context}, name))
                         threads.append(thread)
@@ -230,6 +266,12 @@ def process():
 
                     for thread in threads:
                         thread.join()
+                    
+                    # Verificar se foi cancelado
+                    if processing_cancelled or any(result == "CANCELLED" for result in results.values()):
+                        json_data = safe_json_dumps({'error': 'Processamento cancelado pelo usuário.'})
+                        yield f"data: {json_data}\n\n"
+                        return
                     
                     for key, result in results.items():
                         if result == "Error:EmptyResponse" or "Erro ao processar" in result:
@@ -263,15 +305,40 @@ def process():
                 else:
                     log_print("=== MODO HIERÁRQUICO SELECIONADO ===")
                     # --- LÓGICA HIERÁRQUICA (SEQUENCIAL) ---
+                    
+                    # Atualizar prompts hierárquicos com parâmetros de tamanho
+                    updated_grok_template = PROMPT_HIERARQUICO_GROK.replace(
+                        "<minimum>24000</minimum>\n        <maximum>30000</maximum>", 
+                        f"<minimum>{min_chars}</minimum>\n        <maximum>{max_chars}</maximum>"
+                    )
+                    updated_sonnet_template = PROMPT_HIERARQUICO_SONNET.replace(
+                        "**Valide se o texto atingiu a quantidade de caracteres mínimas de 24000 e máxima de 30000 caracteres**.", 
+                        f"**Valide se o texto atingiu a quantidade de caracteres mínimas de {min_chars} e máxima de {max_chars} caracteres**."
+                    )
+                    updated_gemini_template = PROMPT_HIERARQUICO_GEMINI.replace(
+                        "**Valide se o texto atingiu a quantidade de caracteres mínimas de 24000 e máxima de 30000 caracteres**.", 
+                        f"**Valide se o texto atingiu a quantidade de caracteres mínimas de {min_chars} e máxima de {max_chars} caracteres**."
+                    )
+                    
                     json_data = safe_json_dumps({'progress': 15, 'message': 'O GROK está processando sua solicitação...'})
                     yield f"data: {json_data}\n\n"
                     
+                    if processing_cancelled:
+                        json_data = safe_json_dumps({'error': 'Processamento cancelado pelo usuário.'})
+                        yield f"data: {json_data}\n\n"
+                        return
+                    
                     log_print("=== PROCESSANDO GROK ===")
-                    prompt_grok = PromptTemplate(template=PROMPT_HIERARQUICO_GROK, input_variables=["solicitacao_usuario", "rag_context"])
+                    prompt_grok = PromptTemplate(template=updated_grok_template, input_variables=["solicitacao_usuario", "rag_context"])
                     chain_grok = prompt_grok | grok_llm | output_parser
                     resposta_grok = chain_grok.invoke({"solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context})
                     
                     log_print(f"=== GROK TERMINOU: {len(resposta_grok)} chars ===")
+                    
+                    if processing_cancelled:
+                        json_data = safe_json_dumps({'error': 'Processamento cancelado pelo usuário.'})
+                        yield f"data: {json_data}\n\n"
+                        return
                     
                     if not resposta_grok or not resposta_grok.strip():
                         log_print("=== ERRO: GROK VAZIO ===")
@@ -283,13 +350,23 @@ def process():
                     json_data = safe_json_dumps({'progress': 33, 'message': 'Claude Sonnet está processando...', 'partial_result': {'id': 'grok-output', 'content': resposta_grok}})
                     yield f"data: {json_data}\n\n"
                     
+                    if processing_cancelled:
+                        json_data = safe_json_dumps({'error': 'Processamento cancelado pelo usuário.'})
+                        yield f"data: {json_data}\n\n"
+                        return
+                    
                     log_print("=== PROCESSANDO SONNET ===")
-                    prompt_sonnet = PromptTemplate(template=PROMPT_HIERARQUICO_SONNET, input_variables=["solicitacao_usuario", "texto_para_analise"])
+                    prompt_sonnet = PromptTemplate(template=updated_sonnet_template, input_variables=["solicitacao_usuario", "texto_para_analise"])
                     claude_with_max_tokens = claude_llm.bind(max_tokens=20000)
                     chain_sonnet = prompt_sonnet | claude_with_max_tokens | output_parser
                     resposta_sonnet = chain_sonnet.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_grok})
                     
                     log_print(f"=== SONNET TERMINOU: {len(resposta_sonnet)} chars ===")
+                    
+                    if processing_cancelled:
+                        json_data = safe_json_dumps({'error': 'Processamento cancelado pelo usuário.'})
+                        yield f"data: {json_data}\n\n"
+                        return
                     
                     if not resposta_sonnet or not resposta_sonnet.strip():
                         log_print("=== ERRO: SONNET VAZIO ===")
@@ -301,12 +378,22 @@ def process():
                     json_data = safe_json_dumps({'progress': 66, 'message': 'Gemini está processando...', 'partial_result': {'id': 'sonnet-output', 'content': resposta_sonnet}})
                     yield f"data: {json_data}\n\n"
                     
+                    if processing_cancelled:
+                        json_data = safe_json_dumps({'error': 'Processamento cancelado pelo usuário.'})
+                        yield f"data: {json_data}\n\n"
+                        return
+                    
                     log_print("=== PROCESSANDO GEMINI ===")
-                    prompt_gemini = PromptTemplate(template=PROMPT_HIERARQUICO_GEMINI, input_variables=["solicitacao_usuario", "texto_para_analise"])
+                    prompt_gemini = PromptTemplate(template=updated_gemini_template, input_variables=["solicitacao_usuario", "texto_para_analise"])
                     chain_gemini = prompt_gemini | gemini_llm | output_parser
                     resposta_gemini = chain_gemini.invoke({"solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_sonnet})
                     
                     log_print(f"=== GEMINI TERMINOU: {len(resposta_gemini)} chars ===")
+                    
+                    if processing_cancelled:
+                        json_data = safe_json_dumps({'error': 'Processamento cancelado pelo usuário.'})
+                        yield f"data: {json_data}\n\n"
+                        return
                     
                     if not resposta_gemini or not resposta_gemini.strip():
                         log_print("=== ERRO: GEMINI VAZIO ===")
@@ -330,30 +417,43 @@ def process():
 
 @app.route('/merge', methods=['POST'])
 def merge():
-    """Recebe os textos do modo Atômico e os consolida usando um LLM."""
-    global merge_full_content
+    """Recebe os textos do modo Atômico e os consolida usando Claude Sonnet."""
+    global merge_full_content, processing_cancelled
+    processing_cancelled = False  # Reset do flag
     
     data = request.get_json()
     log_print("=== ROTA MERGE ACESSADA ===")
+    log_print("=== USANDO CLAUDE SONNET PARA MERGE ===")
     
     def generate_merge_stream():
         """Gera a resposta do merge em streaming."""
-        global merge_full_content
+        global merge_full_content, processing_cancelled
         
         try:
             log_print("=== INICIANDO MERGE STREAM ===")
             json_data = safe_json_dumps({'progress': 0, 'message': 'Iniciando o processo de merge...'})
             yield f"data: {json_data}\n\n"
             
+            if processing_cancelled:
+                json_data = safe_json_dumps({'error': 'Processamento cancelado pelo usuário.'})
+                yield f"data: {json_data}\n\n"
+                return
+            
             output_parser = StrOutputParser()
             prompt_merge = PromptTemplate(template=PROMPT_ATOMICO_MERGE, input_variables=["solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
             
-            grok_with_max_tokens = grok_llm.bind(max_tokens=20000)
-            chain_merge = prompt_merge | grok_with_max_tokens | output_parser
+            # MUDANÇA: Usar Claude Sonnet para o merge
+            claude_with_max_tokens = claude_llm.bind(max_tokens=100000)
+            chain_merge = prompt_merge | claude_with_max_tokens | output_parser
 
-            json_data = safe_json_dumps({'progress': 50, 'message': 'Enviando textos para o GROK para consolidação...'})
+            json_data = safe_json_dumps({'progress': 50, 'message': 'Enviando textos para o Claude Sonnet para consolidação...'})
             yield f"data: {json_data}\n\n"
-            log_print("=== INVOCANDO CHAIN DE MERGE ===")
+            log_print("=== INVOCANDO CLAUDE SONNET PARA MERGE ===")
+
+            if processing_cancelled:
+                json_data = safe_json_dumps({'error': 'Processamento cancelado pelo usuário.'})
+                yield f"data: {json_data}\n\n"
+                return
 
             resposta_merge = chain_merge.invoke({
                 "solicitacao_usuario": data.get('solicitacao_usuario'),
@@ -362,10 +462,15 @@ def merge():
                 "texto_para_analise_gemini": data.get('gemini_text')
             })
             
-            log_print(f"=== MERGE CONCLUÍDO: {len(resposta_merge)} chars ===")
+            log_print(f"=== MERGE CLAUDE SONNET CONCLUÍDO: {len(resposta_merge)} chars ===")
+            
+            if processing_cancelled:
+                json_data = safe_json_dumps({'error': 'Processamento cancelado pelo usuário.'})
+                yield f"data: {json_data}\n\n"
+                return
             
             if not resposta_merge or not resposta_merge.strip():
-                json_data = safe_json_dumps({'error': 'Falha no serviço de Merge (GROK): Sem resposta.'})
+                json_data = safe_json_dumps({'error': 'Falha no serviço de Merge (Claude Sonnet): Sem resposta.'})
                 yield f"data: {json_data}\n\n"
                 return
             
