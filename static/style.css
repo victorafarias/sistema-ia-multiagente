@@ -409,3 +409,22 @@ textarea.drag-over {
         width: 90%;
     }
 }
+
+.results-wrapper {
+    display: flex;
+    flex-direction: column; /* Faz com que os elementos fiquem um abaixo do outro */
+    gap: 20px;
+}
+
+.results-container {
+    display: none;
+    flex-direction: row; /* As 3 colunas ficam lado a lado */
+    gap: 10px;
+    margin-bottom: 0;
+}
+
+#final-result-container {
+    display: none;
+    width: 100%; /* Ocupa toda a largura */
+    margin-top: 20px;
+}

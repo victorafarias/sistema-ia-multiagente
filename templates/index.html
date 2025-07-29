@@ -24,6 +24,34 @@
             background-color: #5a6268;
             cursor: not-allowed;
         }
+
+        /* Estilos para garantir que o texto final fique abaixo das 3 colunas */
+        .results-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .results-container {
+            display: none; /* Será alterado via JavaScript */
+            flex-direction: row;
+            gap: 10px;
+            margin-bottom: 0;
+        }
+        
+        #final-result-container {
+            display: none; /* Será alterado via JavaScript */
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        /* Garantir que as 3 colunas principais mantenham o layout original */
+        .results-container .result-column {
+            flex: 1;
+            min-width: 0;
+        }
+        
+
     </style>
 </head>
 <body>
@@ -75,48 +103,54 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                 <button type="submit">Simular Resposta</button>
             </form>
         </div>
-        <div id="results-container" class="results-container" style="display: none;">
-            <div class="result-column">
-                <div class="column-header">
-                    <h2>GROK</h2>
-                    <div>
-                        <button class="copy-btn" onclick="copyToClipboard('grok-output')">Copiar</button>
-                        <button class="convert-btn" onclick="convertToMarkdown('grok-output')">Converter para MD</button>
-                    </div>
-                </div>
-                <div class="output-box" id="grok-output"></div>
-            </div>
-            <div class="result-column">
-                <div class="column-header">
-                    <h2>Claude Sonnet</h2>
-                    <div>
-                        <button class="copy-btn" onclick="copyToClipboard('sonnet-output')">Copiar</button>
-                        <button class="convert-btn" onclick="convertToMarkdown('sonnet-output')">Converter para MD</button>
-                    </div>
-                </div>
-                <div class="output-box" id="sonnet-output"></div>
-            </div>
-            <div class="result-column">
+        
+        <!-- WRAPPER PRINCIPAL PARA OS RESULTADOS -->
+        <div class="results-wrapper">
+            <!-- AS 3 COLUNAS PRINCIPAIS -->
+            <div id="results-container" class="results-container">
                 <div class="result-column">
-                <div class="column-header">
-                    <h2>Gemini</h2>
+                    <div class="column-header">
+                        <h2>GROK</h2>
+                        <div>
+                            <button class="copy-btn" onclick="copyToClipboard('grok-output')">Copiar</button>
+                            <button class="convert-btn" onclick="convertToMarkdown('grok-output')">Converter para MD</button>
+                        </div>
+                    </div>
+                    <div class="output-box" id="grok-output"></div>
+                </div>
+                <div class="result-column">
+                    <div class="column-header">
+                        <h2>Claude Sonnet</h2>
+                        <div>
+                            <button class="copy-btn" onclick="copyToClipboard('sonnet-output')">Copiar</button>
+                            <button class="convert-btn" onclick="convertToMarkdown('sonnet-output')">Converter para MD</button>
+                        </div>
+                    </div>
+                    <div class="output-box" id="sonnet-output"></div>
+                </div>
+                <div class="result-column">
+                    <div class="column-header">
+                        <h2>Gemini</h2>
+                        <div>
+                            <button class="copy-btn" onclick="copyToClipboard('gemini-output')">Copiar</button>
+                            <button class="convert-btn" onclick="convertToMarkdown('gemini-output')">Converter para MD</button>
+                        </div>
+                    </div>
+                    <div class="output-box" id="gemini-output"></div>
+                </div>
+            </div>
+            
+            <!-- TEXTO FINAL ABAIXO DAS 3 COLUNAS -->
+            <div id="final-result-container">
+                <div class="column-header" style="border-radius: 8px 8px 0 0; background-color: #e9ecef;">
+                    <h2 id="final-result-title">Texto Final</h2>
                     <div>
-                        <button class="copy-btn" onclick="copyToClipboard('gemini-output')">Copiar</button>
-                        <button class="convert-btn" onclick="convertToMarkdown('gemini-output')">Converter para MD</button>
+                        <button class="copy-btn" onclick="copyToClipboard('final-output')">Copiar</button>
+                        <button class="convert-btn" onclick="convertToMarkdown('final-output')">Converter para MD</button>
                     </div>
                 </div>
-                <div class="output-box" id="gemini-output"></div>
+                <div class="output-box" id="final-output" style="background-color: #fafafa; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;"></div>
             </div>
-        </div>
-        <div id="final-result-container" style="display: none;">
-            <div class="column-header" style="border-radius: 8px 8px 0 0; background-color: #e9ecef;">
-                <h2 id="final-result-title">Texto Final</h2>
-                <div>
-                    <button class="copy-btn" onclick="copyToClipboard('final-output')">Copiar</button>
-                    <button class="convert-btn" onclick="convertToMarkdown('final-output')">Converter para MD</button>
-                </div>
-            </div>
-            <div class="output-box" id="final-output" style="background-color: #fafafa; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;"></div>
         </div>
     </div>
     <script>
