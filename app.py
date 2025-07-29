@@ -457,7 +457,7 @@ def merge():
             prompt_merge = PromptTemplate(template=updated_merge_template, input_variables=["solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
             
             # MUDANÇA: Usar Claude Sonnet para o merge
-            claude_with_max_tokens = claude_llm.bind(max_tokens=100000)
+            claude_with_max_tokens = claude_llm.bind(max_tokens=64000)
             chain_merge = prompt_merge | claude_with_max_tokens | output_parser
 
             json_data = safe_json_dumps({'progress': 50, 'message': 'Enviando textos para o Claude Sonnet para consolidação...'})
