@@ -50,22 +50,66 @@
             min-width: 0;
         }
 
-        /* Estilos para os campos de tamanho do texto */
+        /* ESTILOS RESPONSIVOS */
+        
+        /* Container principal */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+        
+        /* Header responsivo */
+        .header-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .controls-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Mode toggles responsivos */
+        .mode-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        
+        /* Botão refresh responsivo */
+        .refresh-btn {
+            padding: 8px 12px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        /* Estilos para os campos de tamanho do texto - RESPONSIVO */
         .text-size-controls {
             display: flex;
+            flex-direction: row;
             gap: 15px;
-            margin: 10px 0;
-            align-items: center;
+            margin: 15px 0;
+            align-items: flex-start;
             background-color: #f8f9fa;
             padding: 15px;
-            border-radius: 5px;
+            border-radius: 8px;
             border: 1px solid #e9ecef;
+            flex-wrap: wrap;
         }
 
         .text-size-field {
             display: flex;
             flex-direction: column;
             gap: 5px;
+            min-width: 120px;
         }
 
         .text-size-field label {
@@ -75,11 +119,20 @@
         }
 
         .text-size-field input {
-            width: 80px;
-            padding: 5px 8px;
+            width: 100%;
+            max-width: 120px;
+            padding: 8px 10px;
             border: 1px solid #ced4da;
-            border-radius: 3px;
+            border-radius: 4px;
             font-size: 14px;
+        }
+
+        .text-size-tip {
+            flex: 1;
+            min-width: 250px;
+            font-size: 12px;
+            color: #6c757d;
+            line-height: 1.4;
         }
 
         /* Estilo para o botão de cancelar */
@@ -87,11 +140,12 @@
             background-color: #dc3545;
             color: white;
             border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
+            padding: 10px 20px;
+            border-radius: 6px;
             cursor: pointer;
-            margin-top: 10px;
+            margin-top: 15px;
             font-size: 14px;
+            transition: background-color 0.3s;
         }
 
         .cancel-btn:hover {
@@ -106,6 +160,313 @@
         /* Ajuste no loader para acomodar o botão de cancelar */
         .loader-content {
             text-align: center;
+            padding: 20px;
+        }
+
+        /* Resultados responsivos */
+        .results-container {
+            gap: 15px;
+        }
+        
+        .result-column {
+            min-width: 0;
+            overflow: hidden;
+        }
+        
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 12px 15px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .column-header h2 {
+            margin: 0;
+            font-size: 18px;
+            color: #495057;
+        }
+        
+        .column-header div {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        /* Botões responsivos */
+        .copy-btn, .convert-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            white-space: nowrap;
+        }
+        
+        .copy-btn {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .copy-btn:hover {
+            background-color: #218838;
+        }
+        
+        /* Output boxes responsivos */
+        .output-box {
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            background-color: #ffffff;
+            min-height: 300px;
+            max-height: 600px;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.6;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        /* Form elements responsivos */
+        textarea, input[type="text"], input[type="number"] {
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        
+        button[type="submit"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+
+        /* MEDIA QUERIES PARA DIFERENTES TAMANHOS DE TELA */
+        
+        /* Tablets e telas médias */
+        @media (max-width: 992px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .results-container {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .result-column {
+                width: 100%;
+            }
+            
+            .text-size-controls {
+                flex-direction: column;
+                gap: 15px;
+                align-items: stretch;
+            }
+            
+            .text-size-field {
+                min-width: 100%;
+            }
+            
+            .text-size-tip {
+                min-width: 100%;
+            }
+        }
+        
+        /* Smartphones */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header-container {
+                text-align: center;
+            }
+            
+            .header-container h1 {
+                font-size: 24px;
+                margin-bottom: 5px;
+            }
+            
+            .controls-container {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .mode-toggle {
+                font-size: 16px;
+                gap: 10px;
+            }
+            
+            .mode-toggle span {
+                min-width: 80px;
+                text-align: center;
+            }
+            
+            .switch {
+                transform: scale(1.2);
+            }
+            
+            .refresh-btn {
+                padding: 10px 20px;
+                font-size: 16px;
+            }
+            
+            .text-size-controls {
+                padding: 12px;
+                gap: 12px;
+            }
+            
+            .text-size-field input {
+                max-width: 100%;
+                padding: 10px;
+                font-size: 16px; /* Evita zoom no iOS */
+            }
+            
+            .column-header {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+                gap: 8px;
+                padding: 15px;
+            }
+            
+            .column-header h2 {
+                font-size: 20px;
+                margin-bottom: 8px;
+            }
+            
+            .column-header div {
+                justify-content: center;
+                gap: 10px;
+            }
+            
+            .copy-btn, .convert-btn {
+                padding: 8px 16px;
+                font-size: 14px;
+                flex: 1;
+                min-width: 100px;
+            }
+            
+            .output-box {
+                font-size: 16px;
+                padding: 12px;
+                max-height: 400px;
+            }
+            
+            .cancel-btn {
+                padding: 12px 24px;
+                font-size: 16px;
+            }
+            
+            /* Ajustes específicos para o merge button */
+            .floating-merge-btn {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                font-size: 16px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 1000;
+            }
+        }
+        
+        /* Smartphones muito pequenos */
+        @media (max-width: 480px) {
+            .container {
+                padding: 8px;
+            }
+            
+            .header-container h1 {
+                font-size: 20px;
+            }
+            
+            .text-size-controls {
+                padding: 10px;
+            }
+            
+            .column-header {
+                padding: 10px;
+            }
+            
+            .column-header h2 {
+                font-size: 18px;
+            }
+            
+            .copy-btn, .convert-btn {
+                padding: 10px;
+                font-size: 12px;
+                min-width: 80px;
+            }
+            
+            .output-box {
+                padding: 10px;
+                font-size: 14px;
+                max-height: 300px;
+            }
+            
+            .floating-merge-btn {
+                bottom: 10px;
+                right: 10px;
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+        }
+
+        /* Ajustes para modo landscape em mobile */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .output-box {
+                max-height: 200px;
+            }
+            
+            .loader-content {
+                padding: 10px;
+            }
+            
+            .cancel-btn {
+                padding: 8px 16px;
+                margin-top: 10px;
+            }
+        }
+        
+        /* Melhorias de acessibilidade */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .text-size-controls {
+                background-color: #343a40;
+                border-color: #495057;
+                color: #f8f9fa;
+            }
+            
+            .text-size-field label {
+                color: #adb5bd;
+            }
+            
+            .text-size-tip {
+                color: #adb5bd;
+            }
         }
     </style>
 </head>
@@ -146,7 +507,7 @@
                 <textarea name="solicitacao_usuario" id="solicitacao_usuario" rows="8" required></textarea>
                 <div id="file-list-container"><p>Arquivos Anexados:</p><ul id="file-list"></ul></div>
                 
-                <!-- NOVOS CAMPOS: Controle de tamanho do texto -->
+                <!-- CAMPOS DE TAMANHO DO TEXTO - RESPONSIVOS -->
                 <div class="text-size-controls">
                     <div class="text-size-field">
                         <label for="min_chars">Mín. Caracteres:</label>
@@ -156,7 +517,7 @@
                         <label for="max_chars">Máx. Caracteres:</label>
                         <input type="number" id="max_chars" name="max_chars" value="30000" min="1000" max="100000" step="1000">
                     </div>
-                    <div style="font-size: 12px; color: #6c757d; max-width: 300px;">
+                    <div class="text-size-tip">
                         <strong>Dica:</strong> Defina o tamanho desejado para os textos gerados pelas IAs. Valores maiores resultam em textos mais detalhados.
                     </div>
                 </div>
@@ -246,7 +607,7 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
         let attachedFiles = [];
         let originalUserQuery = "";
         let rawTexts = {};
-        let currentProcessingType = null; // 'main' ou 'merge'
+        let currentProcessingType = null;
 
         // Log para debug
         function debugLog(message) {
@@ -548,7 +909,7 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
             }
         });
 
-        // --- Função de Processamento de Stream (ATUALIZADA) ---
+        // --- Função de Processamento de Stream ---
         function processStreamData(data, isMerge) {
             debugLog(`=== PROCESSANDO STREAM DATA ===`);
             debugLog(`Progress: ${data.progress}, Message: ${data.message}`);
@@ -593,7 +954,7 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                     finalResultContainer.style.display = 'block';
                     debugLog("Final result container exibido");
                     
-                    // MELHORIA 4: Scroll automático para o texto final
+                    // Scroll automático para o texto final
                     setTimeout(() => {
                         finalResultContainer.scrollIntoView({ 
                             behavior: 'smooth', 
@@ -638,7 +999,15 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
             const textToCopy = rawTexts[elementId];
             if (textToCopy !== undefined) {
                 navigator.clipboard.writeText(textToCopy).then(() => {
-                    alert('Texto copiado!');
+                    // Feedback visual melhorado para mobile
+                    const button = event.target;
+                    const originalText = button.textContent;
+                    button.textContent = 'Copiado!';
+                    button.style.backgroundColor = '#28a745';
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.style.backgroundColor = '';
+                    }, 2000);
                     debugLog('Texto copiado com sucesso');
                 });
             } else {
@@ -683,6 +1052,19 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                 button.disabled = false;
             }
         }
+
+        // Detectar orientação e ajustar layout
+        function handleOrientationChange() {
+            setTimeout(() => {
+                // Forçar reflow para ajustar elementos após mudança de orientação
+                document.body.style.display = 'none';
+                document.body.offsetHeight; // Trigger reflow
+                document.body.style.display = '';
+            }, 100);
+        }
+
+        window.addEventListener('orientationchange', handleOrientationChange);
+        window.addEventListener('resize', handleOrientationChange);
     </script>
 </body>
 </html>
