@@ -5,7 +5,7 @@
 PROMPT_HIERARQUICO_GROK = """
 <prompt>
   <role>
-    Você é um filósofo e teólogo católico, especialista em redigir textos profundos e detalhados sobre assuntos diversos da filosofia, teologia, política, antropologia, educação, psicologia etc.
+    {contexto}
   </role>
 
   <requirements>
@@ -55,6 +55,10 @@ PROMPT_HIERARQUICO_GROK = """
 
 PROMPT_HIERARQUICO_SONNET = """
 <tarefa>
+    <role>
+        {contexto}
+    </role>
+
     <objetivo>Analisar criticamente e aprimorar texto gerado por primeiro especialista</objetivo>
     
     <entrada>
@@ -118,6 +122,10 @@ PROMPT_HIERARQUICO_SONNET = """
 
 PROMPT_HIERARQUICO_GEMINI = """
 <tarefa>
+    <role>
+        {contexto}
+    </role>
+
     <objetivo>Você é o revisor final. Sua função é polir e aperfeiçoar o texto que já passou por uma primeira rodada de escrita e uma segunda de revisão e aprofundamento. Não faça reduções e nem resumos. Se conseguir aprofundar e detalhar melhor o texto, adicionar novas referência de novos autores, faça. Se não conseguir, não faça nada.</objetivo>
     
     <entrada>
@@ -189,7 +197,7 @@ PROMPT_HIERARQUICO_GEMINI = """
 PROMPT_ATOMICO_INICIAL = """
 <prompt>
   <role>
-    Você é um filósofo e teólogo católico, especialista em redigir textos profundos e detalhados sobre assuntos diversos da filosofia, teologia, política, antropologia, educação, psicologia etc.
+    {contexto}
   </role>
   <requirements>
     <caracters_count>
@@ -235,35 +243,39 @@ PROMPT_ATOMICO_INICIAL = """
 
 PROMPT_ATOMICO_MERGE = """
 <prompt>
-  <context>
-    Com base na solicitação original do usuário e nos textos-base fornecidos, sua tarefa é analisar criticamente os textos e elaborar uma versão consolidada, unindo o que há de melhor em cada um deles.
-  </context>
+    <role>
+        {contexto}
+    </role>
 
-  <inputs>
+    <task>
+    Com base na solicitação original do usuário e nos textos-base fornecidos, sua tarefa é analisar criticamente os textos e elaborar uma versão consolidada, unindo o que há de melhor em cada um deles.
+    </task>
+
+    <inputs>
     <user_request>
-      <title>Solicitação Original do Usuário:</title>
-      <content>{solicitacao_usuario}</content>
+        <title>Solicitação Original do Usuário:</title>
+        <content>{solicitacao_usuario}</content>
     </user_request>
 
     <text_grok>
-      <title>Texto Gerado pelo GROK:</title>
-      <content>{texto_para_analise_grok}</content>
+        <title>Texto Gerado pelo GROK:</title>
+        <content>{texto_para_analise_grok}</content>
     </text_grok>
 
     <text_sonnet>
-      <title>Texto Gerado pelo Sonnet:</title>
-      <content>{texto_para_analise_sonnet}</content>
+        <title>Texto Gerado pelo Sonnet:</title>
+        <content>{texto_para_analise_sonnet}</content>
     </text_sonnet>
 
     <text_gemini>
-      <title>Texto Gerado pelo Gemini:</title>
-      <content>{texto_para_analise_gemini}</content>
+        <title>Texto Gerado pelo Gemini:</title>
+        <content>{texto_para_analise_gemini}</content>
     </text_gemini>
-  </inputs>
+    </inputs>
 
-  <instructions>
+    <instructions>
     <structure>
-      Analise e escolha a melhor estrutura de seções entre os 3 textos e aplique no texto consolidado. A melhor estrutura de seções é aquela que melhor entendeu o objetivo da solicitação do usuário e que mais conseguir se aprofundar na abordagem do tema.
+        Analise e escolha a melhor estrutura de seções entre os 3 textos e aplique no texto consolidado. A melhor estrutura de seções é aquela que melhor entendeu o objetivo da solicitação do usuário e que mais conseguir se aprofundar na abordagem do tema.
     </structure>
 
     <caracters_count>
@@ -272,40 +284,40 @@ PROMPT_ATOMICO_MERGE = """
     </caracters_count>
 
     <analysis>
-      Verifique a coesão, coerência e profundidade dos argumentos.
+        Verifique a coesão, coerência e profundidade dos argumentos.
     </analysis>
 
     <consolidation>
-      Identifique os pontos fortes de cada texto e gere um texto final consolidado. Cuide para o que texto não fique redundante, ou seja, voltando nos mesmos assuntos e conceitos.
+        Identifique os pontos fortes de cada texto e gere um texto final consolidado. Cuide para o que texto não fique redundante, ou seja, voltando nos mesmos assuntos e conceitos.
     </consolidation>
 
     <corrections>
-      Corrija eventuais imprecisões conceituais ou argumentativas. Corrija eventuais citações a livros ou autores que não existem. Todos as obras e autores devem ser reais.
+        Corrija eventuais imprecisões conceituais ou argumentativas. Corrija eventuais citações a livros ou autores que não existem. Todos as obras e autores devem ser reais.
     </corrections>
 
     <expansion>
-      Não resuma ou reduza o texto: Seu objetivo é consolidar, expandir e aprofundar, nunca encurtar o texto. O resultado final deve ser uma versão mais completa e robusta do que os textos originais, e deve obedecer o mínimo de MIN_CHARS_PLACEHOLDER caracteres.
+        Não resuma ou reduza o texto: Seu objetivo é consolidar, expandir e aprofundar, nunca encurtar o texto. O resultado final deve ser uma versão mais completa e robusta do que os textos originais, e deve obedecer o mínimo de MIN_CHARS_PLACEHOLDER caracteres.
     </expansion>
 
     <style>
-      Mantenha o estilo: Respeite o estilo de linguagem e o tom do texto original.
+        Mantenha o estilo: Respeite o estilo de linguagem e o tom do texto original.
     </style>
 
     <writing_style>
-      Evite usar um estilo de escrita muito característico de textos gerados com IA, como por exemplo: "Não é mera..., mas é...". Coisas assim. Seja mais direto.
-      Tente usar um estilo de escrita parecida com a de Gilbert K. Chesterton.
+        Evite usar um estilo de escrita muito característico de textos gerados com IA, como por exemplo: "Não é mera..., mas é...". Coisas assim. Seja mais direto.
+        Tente usar um estilo de escrita parecida com a de Gilbert K. Chesterton.
     </writing_style>
 
     <language>
-      Verificar se todo o texto, incluindo citações, estão na lingua Português do Brasil. Traduza as que não estiverem.
+        Verificar se todo o texto, incluindo citações, estão na lingua Português do Brasil. Traduza as que não estiverem.
     </language>
 
     <forbidden>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres.</forbidden>
     <forbidden>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres.</forbidden>
-  </instructions>
+    </instructions>
 
-  <output>
-    Texto consolidado, melhorado e corrigido.
-  </output>
+    <output>
+        Texto consolidado, melhorado e corrigido.
+    </output>
 </prompt>
 """

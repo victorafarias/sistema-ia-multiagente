@@ -488,6 +488,10 @@
         <div id="error-box-container"></div>
         <div id="real-form-container">
             <form id="request-form-real">
+                <div class="text-size-field">
+                    <label for="contexto_usuario">Contexto:</label>
+                    <textarea id="contexto_usuario" name="contexto" rows="3" value="Você é um filósofo e teólogo católico, especialista em redigir textos profundos e detalhados sobre assuntos diversos da filosofia, teologia, política, antropologia, educação, psicologia etc."></textarea>
+                </div>
                 <label for="solicitacao_usuario">Digite sua solicitação (ou arraste arquivos aqui):</label>
                 <textarea name="solicitacao_usuario" id="solicitacao_usuario" rows="8" required></textarea>
                 <div id="file-list-container"><p>Arquivos Anexados:</p><ul id="file-list"></ul></div>
@@ -583,6 +587,7 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
         const progressBar = document.getElementById('progress-bar');
         const resultsContainer = document.getElementById('results-container');
         const errorContainer = document.getElementById('error-box-container');
+        const contextoField = document.getElementById('contexto_usuario');
         const textarea = document.getElementById('solicitacao_usuario');
         const fileList = document.getElementById('file-list');
         const mergeBtn = document.getElementById('merge-btn');
@@ -721,6 +726,7 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
             debugLog("Loader iniciado");
 
             const formData = new FormData();
+            formData.append('contexto', contextoField.value.trim());
             formData.append('processing_mode', processingModeSwitch.checked ? 'atomic' : 'hierarchical');
             
             // Adicionar parâmetros de tamanho

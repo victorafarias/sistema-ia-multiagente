@@ -160,6 +160,7 @@ def process():
     
     form_data = request.form
     files = request.files.getlist('files')
+    contexto = form_data.get('contexto', '').strip()
     mode = form_data.get('mode', 'real')
     processing_mode = form_data.get('processing_mode', 'hierarchical')
     
@@ -248,7 +249,7 @@ def process():
                         "MIN_CHARS_PLACEHOLDER", str(min_chars)
                     ).replace(
                         "MAX_CHARS_PLACEHOLDER", str(max_chars)
-                    )
+                    ).replace("<role>", f"<role>\n    {contexto}") #injeta contexto
                     
                     prompt = PromptTemplate(template=updated_prompt_template, input_variables=["solicitacao_usuario", "rag_context"])
                     json_data = safe_json_dumps({'progress': 15, 'message': 'Iniciando processamento paralelo...'})
@@ -312,19 +313,19 @@ def process():
                         "MIN_CHARS_PLACEHOLDER", str(min_chars)
                     ).replace(
                         "MAX_CHARS_PLACEHOLDER", str(max_chars)
-                    )
+                    ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
                     
                     updated_sonnet_template = PROMPT_HIERARQUICO_SONNET.replace(
                         "MIN_CHARS_PLACEHOLDER", str(min_chars)
                     ).replace(
                         "MAX_CHARS_PLACEHOLDER", str(max_chars)
-                    )
+                    ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
                     
                     updated_gemini_template = PROMPT_HIERARQUICO_GEMINI.replace(
                         "MIN_CHARS_PLACEHOLDER", str(min_chars)
                     ).replace(
                         "MAX_CHARS_PLACEHOLDER", str(max_chars)
-                    )
+                    ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
                     
                     json_data = safe_json_dumps({'progress': 15, 'message': 'O GROK está processando sua solicitação...'})
                     yield f"data: {json_data}\n\n"
@@ -452,7 +453,7 @@ def merge():
                 "MIN_CHARS_PLACEHOLDER", str(min_chars)
             ).replace(
                 "MAX_CHARS_PLACEHOLDER", str(max_chars)
-            )
+            ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
             
             prompt_merge = PromptTemplate(template=updated_merge_template, input_variables=["solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
             
