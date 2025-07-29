@@ -283,7 +283,7 @@ PROMPT_ATOMICO_MERGE = """
     </corrections>
 
     <expansion>
-      Não resuma ou reduza o texto: Seu objetivo é consolidar, expandir e aprofundar, nunca encurtar o texto. O resultado final deve ser uma versão mais completa e robusta do que os textos originais, e deve obedecer o mínimo de {min_chars} caracteres.
+      Não resuma ou reduza o texto: Seu objetivo é consolidar, expandir e aprofundar, nunca encurtar o texto. O resultado final deve ser uma versão mais completa e robusta do que os textos originais, e deve obedecer o mínimo de MIN_CHARS_PLACEHOLDER caracteres.
     </expansion>
 
     <style>
