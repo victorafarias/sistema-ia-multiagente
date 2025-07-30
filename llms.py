@@ -8,7 +8,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
 from langchain_experimental.openai_assistant import OpenAIAssistantRunnable
-from langchain_core.agents import AgentFinish
+from langchain.agents.openai_assistant.schema import OpenAIAssistantFinish
 from langchain_core.runnables import RunnableLambda
 
 # Carrega as variáveis de ambiente do arquivo .env
