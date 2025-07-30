@@ -251,6 +251,14 @@ def process():
                     ).replace(
                         "MAX_CHARS_PLACEHOLDER", str(max_chars)
                     ).replace("<role>", f"<role>\n    {contexto}") #injeta contexto
+
+                    # --- renderiza e loga o prompt final Atomico ---
+                    rendered_prompt = updated.format(
+                        contexto=contexto,
+                        solicitacao_usuario=solicitacao_usuario,
+                        rag_context=rag_context
+                    )
+                    print(f"[DEBUG] PROMPT ATÔMICO RENDERED:\n{rendered_prompt}\n{'-'*80}")                    
                     
                     prompt = PromptTemplate(template=updated_prompt_template, input_variables=["contexto", "solicitacao_usuario", "rag_context"])
                     json_data = safe_json_dumps({'progress': 15, 'message': 'Iniciando processamento paralelo...'})
@@ -315,18 +323,40 @@ def process():
                     ).replace(
                         "MAX_CHARS_PLACEHOLDER", str(max_chars)
                     ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
+
+                    # --- renderiza e loga o prompt final Hierárquico Grok ---
+                    rendered_grok = updated_grok.format(
+                        contexto=contexto,
+                        solicitacao_usuario=solicitacao_usuario,
+                        rag_context=rag_context
+                    )
+                    print(f"[DEBUG] PROMPT HIERÁRQUICO GROK RENDERED:\n{rendered_grok}\n{'-'*80}")
                     
                     updated_sonnet_template = PROMPT_HIERARQUICO_SONNET.replace(
                         "MIN_CHARS_PLACEHOLDER", str(min_chars)
                     ).replace(
                         "MAX_CHARS_PLACEHOLDER", str(max_chars)
                     ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
+
+                    # --- renderiza e loga o prompt final Hierárquico Sonnet ---
+                    rendered_sonnet = updated_sonnet.format(
+                        contexto=contexto,
+                        resposta_grok=resposta_grok
+                    )
+                    print(f"[DEBUG] PROMPT HIERÁRQUICO SONNET RENDERED:\n{rendered_sonnet}\n{'-'*80}")
                     
                     updated_gemini_template = PROMPT_HIERARQUICO_GEMINI.replace(
                         "MIN_CHARS_PLACEHOLDER", str(min_chars)
                     ).replace(
                         "MAX_CHARS_PLACEHOLDER", str(max_chars)
                     ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
+
+                    # --- renderiza e loga o prompt final Hierárquico Sonnet ---
+                    rendered_gemini = updated_gemini.format(
+                        contexto=contexto,
+                        resposta_grok=resposta_grok
+                    )
+                    print(f"[DEBUG] PROMPT HIERÁRQUICO SONNET RENDERED:\n{rendered_gemini}\n{'-'*80}")
                     
                     json_data = safe_json_dumps({'progress': 15, 'message': 'O GROK está processando sua solicitação...'})
                     yield f"data: {json_data}\n\n"
@@ -461,6 +491,14 @@ def merge():
             ).replace(
                 "MAX_CHARS_PLACEHOLDER", str(max_chars)
             ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
+
+            # --- renderiza e loga o prompt final Atomico Merge ---
+            rendered_merge = updated_merge.format(
+                contexto=contexto,
+                resposta_sonnet=resposta_sonnet,
+                resposta_gemini=resposta_gemini
+            )
+            print(f"[DEBUG] PROMPT ATÔMICO MERGE RENDERED:\n{rendered_merge}\n{'-'*80}")
             
             prompt_merge = PromptTemplate(template=updated_merge_template, input_variables=["contexto", "solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
             
