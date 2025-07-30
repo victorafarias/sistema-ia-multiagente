@@ -9,6 +9,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
 from langchain_experimental.openai_assistant import OpenAIAssistantRunnable
 from langchain_core.runnables import RunnableLambda
+from langchain_experimental.openai_assistant.schema import OpenAIAssistantFinish
 
 # Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
@@ -20,25 +21,25 @@ def format_assistant_input(prompt_value):
     Converte a saída de um PromptTemplate (PromptValue) para o formato de dicionário
     que o OpenAIAssistantRunnable espera.
     """
-    # Extrai o texto do objeto PromptValue
     content_string = prompt_value.to_string()
     return {"content": content_string}
 
-def parse_assistant_output(assistant_output_messages):
+def parse_assistant_output(assistant_finish_object):
     """
-    Extrai o conteúdo de texto da última mensagem retornada pelo assistente.
-    A API de Assistentes retorna uma lista de todas as mensagens da interação.
+    (CORRIGIDO) Extrai a string de saída de um objeto OpenAIAssistantFinish.
+    O resultado final do assistente está no dicionário `return_values`.
     """
-    if assistant_output_messages and len(assistant_output_messages) > 0:
-        # A última mensagem na lista é a resposta do assistente
-        last_message = assistant_output_messages[-1]
-        
-        # O conteúdo da mensagem está em uma lista, geralmente com um único item de texto
-        if last_message.content and len(last_message.content) > 0:
-            # Acessa o valor do texto
-            return last_message.content[0].text.value
-
-    return "" # Retorna string vazia se não houver saída
+    # Verifica se o objeto recebido é do tipo esperado
+    if isinstance(assistant_finish_object, OpenAIAssistantFinish):
+        # A resposta final em string está na chave 'output' do dicionário return_values
+        return assistant_finish_object.return_values.get('output', '')
+    
+    # Adicionado um fallback caso a saída já seja uma string
+    if isinstance(assistant_finish_object, str):
+        return assistant_finish_object
+    
+    # Retorna uma string vazia se o formato for inesperado
+    return ""
 
 # --- Inicialização dos LLMs ---
 
