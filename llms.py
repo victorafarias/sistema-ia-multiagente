@@ -7,7 +7,7 @@ from custom_grok import GrokChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
-from langchain_openai.runnables import OpenAIAssistantRunnabl
+from langchain_openai.runnables import OpenAIAssistantRunnable
 
 # Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
