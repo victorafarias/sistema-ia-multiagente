@@ -27,6 +27,7 @@ grok_llm = GrokChatModel(
    model=os.getenv("GROK_MODEL_ID"),
    base_url=os.getenv("X_API_BASE_URL"),
    timeout=900
+)
 
 # Claude Sonnet
 claude_llm = ChatAnthropic(
