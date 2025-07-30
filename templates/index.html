@@ -469,7 +469,7 @@
         <div class="header-container">
             <div>
                 <h1>Sistema Multi-Agente IA</h1>
-                <p id="flow-description">GROK ➔ Claude Sonnet ➔ Gemini</p>
+                <p id="flow-description">OPEN AI ➔ Claude Sonnet ➔ Gemini</p>
             </div>
             <div class="controls-container">
                 <div class="mode-toggle" title="A versão 'Hierárquica' gerará um único texto que passará por revisão em duas instâncias. Na versão 'Atômica', serão gerados 3 textos, um em cada modelo de IA; e depois um 4º texto será gerado fazendo um texto final consolidado dessas 3 versões.">
@@ -532,13 +532,13 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
             <div id="results-container" class="results-container">
                 <div class="result-column">
                     <div class="column-header">
-                        <h2>GROK</h2>
+                        <h2>OPEN AI</h2>
                         <div>
-                            <button class="copy-btn" onclick="copyToClipboard('grok-output')">Copiar</button>
-                            <button class="convert-btn" onclick="convertToMarkdown('grok-output')">Converter para MD</button>
+                            <button class="copy-btn" onclick="copyToClipboard('openai-output')">Copiar</button>
+                            <button class="convert-btn" onclick="convertToMarkdown('openai-output')">Converter para MD</button>
                         </div>
                     </div>
-                    <div class="output-box" id="grok-output"></div>
+                    <div class="output-box" id="openai-output"></div>
                 </div>
                 <div class="result-column">
                     <div class="column-header">
@@ -613,8 +613,8 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
         processingModeSwitch.addEventListener('change', function() {
             const isAtomic = this.checked;
             document.getElementById('flow-description').textContent = isAtomic ? 
-                "GROK | Claude Sonnet | Gemini (Paralelo)" : 
-                "GROK ➔ Claude Sonnet ➔ Gemini";
+                "OPEN AI | Claude Sonnet | Gemini (Paralelo)" : 
+                "OPEN AI ➔ Claude Sonnet ➔ Gemini";
         });
 
         // --- Lógica do botão de cancelar ---
@@ -825,11 +825,11 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
 
             const payload = {
                 solicitacao_usuario: originalUserQuery,
-                grok_text: rawTexts['grok-output'] || '',
+                openai_text: rawTexts['openai-output'] || '',
                 sonnet_text: rawTexts['sonnet-output'] || '',
                 gemini_text: rawTexts['gemini-output'] || '',
             };
-            debugLog(`Payload do merge preparado com textos de tamanho: G=${payload.grok_text.length}, S=${payload.sonnet_text.length}, G=${payload.gemini_text.length}`);
+            debugLog(`Payload do merge preparado com textos de tamanho: G=${payload.openai_text.length}, S=${payload.sonnet_text.length}, G=${payload.gemini_text.length}`);
 
             try {
                 const response = await fetch('/merge', {

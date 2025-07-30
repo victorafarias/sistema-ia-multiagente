@@ -22,7 +22,7 @@ from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 # Importa os LLMs
-from llms import claude_llm, grok_llm, gemini_llm
+from llms import claude_llm, grok_llm, gemini_llm, openai_llm
 
 # Importa os prompts
 from config import *
@@ -192,7 +192,8 @@ def process():
         if current_mode == 'test':
             log_print("=== MODO TESTE EXECUTADO ===")
             mock_text = form_data.get('mock_text', 'Este é um **texto** de `simulação`.')
-            json_data = safe_json_dumps({'progress': 100, 'message': 'Simulação concluída!', 'partial_result': {'id': 'grok-output', 'content': mock_text}, 'done': True, 'mode': 'atomic' if processing_mode == 'atomic' else 'hierarchical'})
+            # json_data = safe_json_dumps({'progress': 100, 'message': 'Simulação concluída!', 'partial_result': {'id': 'grok-output', 'content': mock_text}, 'done': True, 'mode': 'atomic' if processing_mode == 'atomic' else 'hierarchical'})
+            json_data = safe_json_dumps({'progress': 100, 'message': 'Simulação concluída!', 'partial_result': {'id': 'openai-output', 'content': mock_text}, 'done': True, 'mode': 'atomic' if processing_mode == 'atomic' else 'hierarchical'})
             yield f"data: {json_data}\n\n"
             if processing_mode == 'atomic':
                 json_data = safe_json_dumps({'partial_result': {'id': 'sonnet-output', 'content': mock_text}})
@@ -242,8 +243,8 @@ def process():
                             except Exception as e:
                                 results[key] = f"Erro ao processar {key.upper()}: {e}"
 
-                    claude_atomic_llm = claude_llm.bind(max_tokens=20000)
-                    models = {'grok': grok_llm, 'sonnet': claude_atomic_llm, 'gemini': gemini_llm}
+                    claude_atomic_llm = claude_llm.bind(max_tokens=60000)
+                    models = {'grok': grok_llm, 'sonnet': claude_atomic_llm, 'gemini': gemini_llm, 'openai': openai_llm}
                     
                     # Substituir os placeholders no template
                     updated_prompt_template = PROMPT_ATOMICO_INICIAL.replace(
@@ -291,10 +292,15 @@ def process():
                     json_data = safe_json_dumps({'progress': 80, 'message': 'Todos os modelos responderam. Formatando saídas...'})
                     yield f"data: {json_data}\n\n"
                     
-                    # MUDANÇA: Envia o texto bruto para cada modelo
-                    grok_text = results.get('grok', '')
-                    log_print(f"--- Resposta Bruta do GROK (Atômico) ---\n{grok_text[:200]}...\n--------------------------------------")
-                    json_data = safe_json_dumps({'partial_result': {'id': 'grok-output', 'content': grok_text}})
+                    # Envia o texto bruto para cada modelo
+                    ##grok_text = results.get('grok', '')
+                    ##log_print(f"--- Resposta Bruta do GROK (Atômico) ---\n{grok_text[:200]}...\n--------------------------------------")
+                    ##json_data = safe_json_dumps({'partial_result': {'id': 'grok-output', 'content': grok_text}})
+                    ##yield f"data: {json_data}\n\n"
+
+                    openai_text = results.get('openai', '')
+                    log_print(f"--- Resposta Bruta do OPEN AI (Atômico) ---\n{openai_text[:200]}...\n--------------------------------------")
+                    json_data = safe_json_dumps({'partial_result': {'id': 'openai-output', 'content': openai_text}})
                     yield f"data: {json_data}\n\n"
 
                     sonnet_text = results.get('sonnet', '')
@@ -315,16 +321,21 @@ def process():
                     # --- LÓGICA HIERÁRQUICA (SEQUENCIAL) ---
                     
                     # Atualizar prompts hierárquicos com parâmetros de tamanho
-                    updated_grok_template = PROMPT_HIERARQUICO_GROK.replace(
+                    ##updated_grok_template = PROMPT_HIERARQUICO_GROK.replace(
+                    updated_openai_template = PROMPT_HIERARQUICO_OPENAI.replace(
                         "MIN_CHARS_PLACEHOLDER", str(min_chars)
                     ).replace(
                         "MAX_CHARS_PLACEHOLDER", str(max_chars)
                     ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
 
                     # --- renderiza e loga o prompt final Hierárquico Grok ---
-                    log_print(f"[DEBUG] PROMPT HIERÁRQUICO GROK RENDERED:\n"
-                              f"{updated_grok_template.format(contexto=contexto, solicitacao_usuario=solicitacao_usuario, rag_context=rag_context)}\n""-"*80)
+                    ##log_print(f"[DEBUG] PROMPT HIERÁRQUICO GROK RENDERED:\n"
+                    ##          f"{updated_grok_template.format(contexto=contexto, solicitacao_usuario=solicitacao_usuario, rag_context=rag_context)}\n""-"*80)
                     
+                    # --- renderiza e loga o prompt final Hierárquico OpenAI ---
+                    log_print(f"[DEBUG] PROMPT HIERÁRQUICO OPEN AI RENDERED:\n"
+                              f"{updated_openai_template.format(contexto=contexto, solicitacao_usuario=solicitacao_usuario, rag_context=rag_context)}\n""-"*80)
+
                     updated_sonnet_template = PROMPT_HIERARQUICO_SONNET.replace(
                         "MIN_CHARS_PLACEHOLDER", str(min_chars)
                     ).replace(
@@ -332,9 +343,12 @@ def process():
                     ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
 
                     # --- renderiza e loga o prompt final Hierárquico Sonnet ---
-                    log_print(f"[DEBUG] PROMPT HIERÁRQUICO SONNET RENDERED:\n"
-                              f"{updated_sonnet_template.format(contexto=contexto, solicitacao_usuario=solicitacao_usuario, texto_para_analise=resposta_grok)}\n""-"*80)
+                    ##log_print(f"[DEBUG] PROMPT HIERÁRQUICO SONNET RENDERED:\n"
+                    ##          f"{updated_sonnet_template.format(contexto=contexto, solicitacao_usuario=solicitacao_usuario, texto_para_analise=resposta_grok)}\n""-"*80)
                     
+                    log_print(f"[DEBUG] PROMPT HIERÁRQUICO SONNET RENDERED:\n"
+                              f"{updated_sonnet_template.format(contexto=contexto, solicitacao_usuario=solicitacao_usuario, texto_para_analise=resposta_openai)}\n""-"*80)
+
                     updated_gemini_template = PROMPT_HIERARQUICO_GEMINI.replace(
                         "MIN_CHARS_PLACEHOLDER", str(min_chars)
                     ).replace(
@@ -345,7 +359,8 @@ def process():
                     log_print(f"[DEBUG] PROMPT HIERÁRQUICO GEMINI RENDERED:\n"
                               f"{updated_gemini_template.format(contexto=contexto, solicitacao_usuario=solicitacao_usuario, texto_para_analise=resposta_sonnet)}\n""-"*80)
                     
-                    json_data = safe_json_dumps({'progress': 15, 'message': 'O GROK está processando sua solicitação...'})
+                    ##json_data = safe_json_dumps({'progress': 15, 'message': 'O GROK está processando sua solicitação...'})
+                    json_data = safe_json_dumps({'progress': 15, 'message': 'A OPEN AI está processando sua solicitação...'})
                     yield f"data: {json_data}\n\n"
                     
                     if processing_cancelled:
@@ -353,26 +368,43 @@ def process():
                         yield f"data: {json_data}\n\n"
                         return
                     
-                    log_print("=== PROCESSANDO GROK ===")
-                    prompt_grok = PromptTemplate(template=updated_grok_template, input_variables=["contexto", "solicitacao_usuario", "rag_context"])
-                    chain_grok = prompt_grok | grok_llm | output_parser
-                    resposta_grok = chain_grok.invoke({"contexto": contexto, "solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context})
+                    #log_print("=== PROCESSANDO GROK ===")
+                    #prompt_grok = PromptTemplate(template=updated_grok_template, input_variables=["contexto", "solicitacao_usuario", "rag_context"])
+                    #chain_grok = prompt_grok | grok_llm | output_parser
+                    #resposta_grok = chain_grok.invoke({"contexto": contexto, "solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context}) 
+                    #log_print(f"=== GROK TERMINOU: {len(resposta_grok)} chars ===")
                     
-                    log_print(f"=== GROK TERMINOU: {len(resposta_grok)} chars ===")
+                    log_print("=== PROCESSANDO OPEN AI ===")
+                    prompt_openai = PromptTemplate(template=updated_openai_template, input_variables=["contexto", "solicitacao_usuario", "rag_context"])
+                    chain_openai = prompt_openai | openai_llm | output_parser
+                    resposta_openai = chain_openai.invoke({"contexto": contexto, "solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context})
                     
+                    log_print(f"=== OPEN AI TERMINOU: {len(resposta_openai)} chars ===")
+
+
                     if processing_cancelled:
                         json_data = safe_json_dumps({'error': 'Processamento cancelado pelo usuário.'})
                         yield f"data: {json_data}\n\n"
                         return
                     
-                    if not resposta_grok or not resposta_grok.strip():
-                        log_print("=== ERRO: GROK VAZIO ===")
-                        json_data = safe_json_dumps({'error': 'Falha no serviço GROK: Sem resposta.'})
+                    ##if not resposta_grok or not resposta_grok.strip():
+                    ##    log_print("=== ERRO: GROK VAZIO ===")
+                    ##    json_data = safe_json_dumps({'error': 'Falha no serviço GROK: Sem resposta.'})
+                    ##    yield f"data: {json_data}\n\n"
+                    ##    return
+                    ##
+                    ##log_print("=== ENVIANDO RESPOSTA GROK PARA FRONTEND ===")
+                    ##json_data = safe_json_dumps({'progress': 33, 'message': 'Claude Sonnet está processando...', 'partial_result': {'id': 'grok-output', 'content': resposta_grok}})
+                    ##yield f"data: {json_data}\n\n"
+
+                    if not resposta_openai or not resposta_openai.strip():
+                        log_print("=== ERRO: OPEN AI VAZIO ===")
+                        json_data = safe_json_dumps({'error': 'Falha no serviço OPEN AI: Sem resposta.'})
                         yield f"data: {json_data}\n\n"
                         return
                     
-                    log_print("=== ENVIANDO RESPOSTA GROK PARA FRONTEND ===")
-                    json_data = safe_json_dumps({'progress': 33, 'message': 'Claude Sonnet está processando...', 'partial_result': {'id': 'grok-output', 'content': resposta_grok}})
+                    log_print("=== ENVIANDO RESPOSTA OPEN AI PARA FRONTEND ===")
+                    json_data = safe_json_dumps({'progress': 33, 'message': 'Claude Sonnet está processando...', 'partial_result': {'id': 'openai-output', 'content': resposta_openai}})
                     yield f"data: {json_data}\n\n"
                     
                     if processing_cancelled:
@@ -382,9 +414,9 @@ def process():
                     
                     log_print("=== PROCESSANDO SONNET ===")
                     prompt_sonnet = PromptTemplate(template=updated_sonnet_template, input_variables=["contexto", "solicitacao_usuario", "texto_para_analise"])
-                    claude_with_max_tokens = claude_llm.bind(max_tokens=20000)
+                    claude_with_max_tokens = claude_llm.bind(max_tokens=60000)
                     chain_sonnet = prompt_sonnet | claude_with_max_tokens | output_parser
-                    resposta_sonnet = chain_sonnet.invoke({"contexto": contexto, "solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_grok})
+                    resposta_sonnet = chain_sonnet.invoke({"contexto": contexto, "solicitacao_usuario": solicitacao_usuario, "texto_para_analise": resposta_openai})
                     
                     log_print(f"=== SONNET TERMINOU: {len(resposta_sonnet)} chars ===")
                     
@@ -480,11 +512,16 @@ def merge():
             ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
 
             # --- renderiza e loga o prompt final Atomico Merge --
+            ##log_print(f"[DEBUG] PROMPT MERGE RENDERED:\n"
+            ##          f"{updated_merge_template.format(contexto=contexto, solicitacao_usuario=data.get('solicitacao_usuario'), texto_para_analise_grok=data.get('grok_text'), texto_para_analise_sonnet=data.get('sonnet_text'), texto_para_analise_gemini=data.get('gemini_text'))}\n""-"*80)
+            ##
+            ##prompt_merge = PromptTemplate(template=updated_merge_template, input_variables=["contexto", "solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
+            
             log_print(f"[DEBUG] PROMPT MERGE RENDERED:\n"
-                      f"{updated_merge_template.format(contexto=contexto, solicitacao_usuario=data.get('solicitacao_usuario'), texto_para_analise_grok=data.get('grok_text'), texto_para_analise_sonnet=data.get('sonnet_text'), texto_para_analise_gemini=data.get('gemini_text'))}\n""-"*80)
+                      f"{updated_merge_template.format(contexto=contexto, solicitacao_usuario=data.get('solicitacao_usuario'), texto_para_analise_openai=data.get('openai_text'), texto_para_analise_sonnet=data.get('sonnet_text'), texto_para_analise_gemini=data.get('gemini_text'))}\n""-"*80)
             
-            prompt_merge = PromptTemplate(template=updated_merge_template, input_variables=["contexto", "solicitacao_usuario", "texto_para_analise_grok", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
-            
+            prompt_merge = PromptTemplate(template=updated_merge_template, input_variables=["contexto", "solicitacao_usuario", "texto_para_analise_openai", "texto_para_analise_sonnet", "texto_para_analise_gemini"])
+
             # MUDANÇA: Usar Claude Sonnet para o merge
             claude_with_max_tokens = claude_llm.bind(max_tokens=64000)
             chain_merge = prompt_merge | claude_with_max_tokens | output_parser
@@ -501,7 +538,8 @@ def merge():
             resposta_merge = chain_merge.invoke({
                 "contexto": data.get('contexto'), 
                 "solicitacao_usuario": data.get('solicitacao_usuario'),
-                "texto_para_analise_grok": data.get('grok_text'),
+                ##"texto_para_analise_grok": data.get('grok_text'),
+                "texto_para_analise_openai": data.get('openai_text'),
                 "texto_para_analise_sonnet": data.get('sonnet_text'),
                 "texto_para_analise_gemini": data.get('gemini_text')
             })
