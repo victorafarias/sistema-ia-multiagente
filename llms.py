@@ -22,11 +22,11 @@ openai_llm = OpenAIAssistantRunnable(
 )
 
 # GROK da xAI
-##grok_llm = GrokChatModel(
-##   api_key=os.getenv("X_API_KEY"),
-##   model=os.getenv("GROK_MODEL_ID"),
-##   base_url=os.getenv("X_API_BASE_URL"),
-##   timeout=900
+grok_llm = GrokChatModel(
+   api_key=os.getenv("X_API_KEY"),
+   model=os.getenv("GROK_MODEL_ID"),
+   base_url=os.getenv("X_API_BASE_URL"),
+   timeout=900
 
 # Claude Sonnet
 claude_llm = ChatAnthropic(
