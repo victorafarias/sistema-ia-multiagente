@@ -1,9 +1,60 @@
 # app.py
 
+import sys
+import os
+import subprocess
+import importlib.util
+
+print("--- INÍCIO DO DEBUG ---", flush=True)
+
+# 1. Onde o Python está procurando por pacotes?
+print("\n[1] Sys Path (Caminhos de Busca):", flush=True)
+for path in sys.path:
+    print(f"  - {path}", flush=True)
+
+# 2. Quais pacotes estão realmente instalados (usando pip)?
+print("\n[2] Pacotes Instalados (pip list):", flush=True)
+try:
+    result = subprocess.run(
+        [sys.executable, '-m', 'pip', 'list'],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    print(result.stdout, flush=True)
+except Exception as e:
+    print(f"  ERRO ao rodar 'pip list': {e}", flush=True)
+
+
+# 3. Vamos verificar especificamente o langchain-openai
+print("\n[3] Verificando 'langchain_openai':", flush=True)
+try:
+    spec = importlib.util.find_spec('langchain_openai')
+    if spec:
+        print(f"  Pacote encontrado: {spec.name}", flush=True)
+        print(f"  Localização: {spec.origin}", flush=True)
+        if spec.submodule_search_locations:
+            package_dir = spec.submodule_search_locations[0]
+            print(f"  Pasta do pacote: {package_dir}", flush=True)
+            print("  Conteúdo da pasta do pacote:", flush=True)
+            try:
+                for item in os.listdir(package_dir):
+                    print(f"    - {item}", flush=True)
+            except Exception as e:
+                print(f"    ERRO ao listar diretório: {e}", flush=True)
+    else:
+        print("  PACOTE 'langchain_openai' NÃO FOI ENCONTRADO PELO IMPORTLIB!", flush=True)
+
+except Exception as e:
+    print(f"  ERRO ao tentar encontrar 'langchain-openai': {e}", flush=True)
+
+
+print("\n--- FIM DO DEBUG ---", flush=True)
+
+
 from flask import Flask, render_template, request, Response, jsonify
 import json
 import time
-import os
 import uuid
 import threading
 import concurrent.futures
@@ -11,7 +62,6 @@ from html import escape, unescape
 import re
 from markdown_it import MarkdownIt
 from markdown2 import markdown as markdown2_render
-import sys
 
 # Força o flush dos prints para aparecer nos logs do container
 sys.stdout.reconfigure(line_buffering=True)
