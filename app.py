@@ -5,6 +5,7 @@ import os
 import subprocess
 import importlib.util
 
+'''
 print("--- INÍCIO DO DEBUG ---", flush=True)
 
 # 1. Onde o Python está procurando por pacotes?
@@ -50,7 +51,7 @@ except Exception as e:
 
 
 print("\n--- FIM DO DEBUG ---", flush=True)
-
+'''
 
 from flask import Flask, render_template, request, Response, jsonify
 import json
@@ -72,7 +73,7 @@ from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 # Importa os LLMs
-from llms import claude_llm, grok_llm, gemini_llm, openai_llm
+from llms import claude_llm, gemini_llm, openai_llm#, grok_llm
 
 # Importa os prompts
 from config import *
@@ -294,14 +295,15 @@ def process():
                                 results[key] = f"Erro ao processar {key.upper()}: {e}"
 
                     claude_atomic_llm = claude_llm.bind(max_tokens=60000)
-                    models = {'grok': grok_llm, 'sonnet': claude_atomic_llm, 'gemini': gemini_llm, 'openai': openai_llm}
+                    #models = {'grok': grok_llm, 'sonnet': claude_atomic_llm, 'gemini': gemini_llm, 'openai': openai_llm}
+                    models = {'sonnet': claude_atomic_llm, 'gemini': gemini_llm, 'openai': openai_llm}
                     
                     # Substituir os placeholders no template
                     updated_prompt_template = PROMPT_ATOMICO_INICIAL.replace(
                         "MIN_CHARS_PLACEHOLDER", str(min_chars)
                     ).replace(
                         "MAX_CHARS_PLACEHOLDER", str(max_chars)
-                    ).replace("<role>", f"<role>\n    {contexto}") #injeta contexto
+                    )
 
                     # --- renderiza e loga o prompt final Atomico ---
                     # ——— log do prompt atômico já formatado ———
@@ -376,7 +378,7 @@ def process():
                         "MIN_CHARS_PLACEHOLDER", str(min_chars)
                     ).replace(
                         "MAX_CHARS_PLACEHOLDER", str(max_chars)
-                    ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
+                    )
 
                     # --- renderiza e loga o prompt final Hierárquico Grok ---
                     ##log_print(f"[DEBUG] PROMPT HIERÁRQUICO GROK RENDERED:\n"
@@ -390,7 +392,7 @@ def process():
                         "MIN_CHARS_PLACEHOLDER", str(min_chars)
                     ).replace(
                         "MAX_CHARS_PLACEHOLDER", str(max_chars)
-                    ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
+                    )
 
                     # --- renderiza e loga o prompt final Hierárquico Sonnet ---
                     ##log_print(f"[DEBUG] PROMPT HIERÁRQUICO SONNET RENDERED:\n"
@@ -403,7 +405,7 @@ def process():
                         "MIN_CHARS_PLACEHOLDER", str(min_chars)
                     ).replace(
                         "MAX_CHARS_PLACEHOLDER", str(max_chars)
-                    ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
+                    )
 
                     # --- renderiza e loga o prompt final Hierárquico Gemini ---
                     log_print(f"[DEBUG] PROMPT HIERÁRQUICO GEMINI RENDERED:\n"
@@ -425,8 +427,9 @@ def process():
                     #log_print(f"=== GROK TERMINOU: {len(resposta_grok)} chars ===")
                     
                     log_print("=== PROCESSANDO OPEN AI ===")
+                    openai_with_max_tokens = openai_llm.bind(max_completion_tokens=100000)
                     prompt_openai = PromptTemplate(template=updated_openai_template, input_variables=["contexto", "solicitacao_usuario", "rag_context"])
-                    chain_openai = prompt_openai | openai_llm | output_parser
+                    chain_openai = prompt_openai | openai_with_max_tokens | output_parser
                     resposta_openai = chain_openai.invoke({"contexto": contexto, "solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context})
                     
                     log_print(f"=== OPEN AI TERMINOU: {len(resposta_openai)} chars ===")
@@ -559,7 +562,7 @@ def merge():
                 "MIN_CHARS_PLACEHOLDER", str(min_chars)
             ).replace(
                 "MAX_CHARS_PLACEHOLDER", str(max_chars)
-            ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
+            )
 
             # --- renderiza e loga o prompt final Atomico Merge --
             ##log_print(f"[DEBUG] PROMPT MERGE RENDERED:\n"

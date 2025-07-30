@@ -9,10 +9,10 @@ PROMPT_HIERARQUICO_GROK = """
   </role>
 
   <requirements>
-    <caracters_count>
-        <minimum>MIN_CHARS_PLACEHOLDER</minimum>
-        <maximum>MAX_CHARS_PLACEHOLDER</maximum>
-    </caracters_count>
+    <length_requirements>
+        <min_characters_no_spaces>MIN_CHARS_PLACEHOLDER</min_characters_no_spaces>
+        <max_characters_no_spaces>MAX_CHARS_PLACEHOLDER</max_characters_no_spaces>
+    </length_requirements>
     <language>Português do Brasil</language>
     <paragraph_structure>Parágrafos curtos para facilitar a leitura</paragraph_structure>
     <language_style>
@@ -47,8 +47,8 @@ PROMPT_HIERARQUICO_GROK = """
     7. Evite usar um estilo de escrita muito característico de textos gerados com IA, como por exemplo: "Não é mera..., mas é...". Coisas assim. Seja mais direto.
     8. Todo o texto, incluindo citações, devem estar na lingua Português do Brasil.
 
-    <forbidden>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres.</forbidden>
-    <forbidden>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres.</forbidden>    
+    <forbidden>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres *desconsiderando os espaços*.</forbidden>
+    <forbidden>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres *desconsiderando os espaços*.</forbidden>  
   </instructions>
 </prompt>
 """
@@ -67,10 +67,10 @@ PROMPT_HIERARQUICO_SONNET = """
     </entrada>
     
     <tamanhoDoTexto>
-        <caracteres>
-            <minimo>MIN_CHARS_PLACEHOLDER</minimo>
-            <maximo>MAX_CHARS_PLACEHOLDER</maximo>
-        </caracteres>
+        <length_requirements>
+            <min_characters_no_spaces>MIN_CHARS_PLACEHOLDER</min_characters_no_spaces>
+            <max_characters_no_spaces>MAX_CHARS_PLACEHOLDER</max_characters_no_spaces>
+        </length_requirements>
     </tamanhoDoTexto>
     
     <instrucoes>
@@ -93,8 +93,8 @@ PROMPT_HIERARQUICO_SONNET = """
             <acao>corrigir problemas argumentativos</acao>
         </correcoes>
 
-        <forbidden>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres.</forbidden>
-        <forbidden>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres.</forbidden>
+    <forbidden>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres *desconsiderando os espaços*.</forbidden>
+    <forbidden>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres *desconsiderando os espaços*.</forbidden>
 
     </instrucoes>
     
@@ -134,10 +134,10 @@ PROMPT_HIERARQUICO_GEMINI = """
     </entrada>
     
     <tamanhoDoTexto>
-        <caracteres>
-            <minimo>MIN_CHARS_PLACEHOLDER</minimo>
-            <maximo>MAX_CHARS_PLACEHOLDER</maximo>
-        </caracteres>
+        <length_requirements>
+            <min_characters_no_spaces>MIN_CHARS_PLACEHOLDER</min_characters_no_spaces>
+            <max_characters_no_spaces>MAX_CHARS_PLACEHOLDER</max_characters_no_spaces>
+        </length_requirements>
     </tamanhoDoTexto>
     
     <instrucoes>
@@ -173,8 +173,8 @@ PROMPT_HIERARQUICO_GEMINI = """
         <proibido>encurtar o conteúdo original</proibido>
         <proibido>elaborar um texto com mais de 30000 caracteres</proibido>
         <proibido>usar expressões características de IA como "Não é mera..., mas é..."</proibido>
-        <proibido>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres.</proibido>
-        <proibido>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres.</proibido>
+        <proibido>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres  *desconsiderando os espaços*.</proibido>
+        <proibido>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres *desconsiderando os espaços*.</proibido>
     </restricoes>
     
     <requisitos>
@@ -200,10 +200,10 @@ PROMPT_ATOMICO_INICIAL = """
     {contexto}
   </role>
   <requirements>
-    <caracters_count>
-        <minimum>MIN_CHARS_PLACEHOLDER</minimum>
-        <maximum>MAX_CHARS_PLACEHOLDER</maximum>
-    </caracters_count>
+    <length_requirements>
+        <min_characters_no_spaces>MIN_CHARS_PLACEHOLDER</min_characters_no_spaces>
+        <max_characters_no_spaces>MAX_CHARS_PLACEHOLDER</max_characters_no_spaces>
+    </length_requirements>
     <language>Português do Brasil</language>
     <paragraph_structure>Parágrafos curtos para facilitar a leitura</paragraph_structure>
     <language_style>
@@ -235,8 +235,8 @@ PROMPT_ATOMICO_INICIAL = """
     7. Evite usar um estilo de escrita muito característico de textos gerados com IA, como por exemplo: "Não é mera..., mas é...". Coisas assim. Seja mais direto.
     8. Todo o texto, incluindo citações, devem estar na lingua Português do Brasil.
 
-    <forbidden>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres.</forbidden>
-    <forbidden>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres.</forbidden>
+    <forbidden>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres *desconsiderando os espaços*.</forbidden>
+    <forbidden>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres *desconsiderando os espaços*.</forbidden>
   </instructions>
 </prompt>
 """
@@ -259,7 +259,8 @@ PROMPT_ATOMICO_MERGE = """
 
     <text_grok>
         <title>Texto Gerado pelo GROK:</title>
-        <content>{texto_para_analise_grok}</content>
+        <content>{texto_para_analise_openai}</content>
+        
     </text_grok>
 
     <text_sonnet>
@@ -278,10 +279,10 @@ PROMPT_ATOMICO_MERGE = """
         Analise e escolha a melhor estrutura de seções entre os 3 textos e aplique no texto consolidado. A melhor estrutura de seções é aquela que melhor entendeu o objetivo da solicitação do usuário e que mais conseguir se aprofundar na abordagem do tema.
     </structure>
 
-    <caracters_count>
-        <minimum>MIN_CHARS_PLACEHOLDER</minimum>
-        <maximum>MAX_CHARS_PLACEHOLDER</maximum>
-    </caracters_count>
+    <length_requirements>
+        <min_characters_no_spaces>MIN_CHARS_PLACEHOLDER</min_characters_no_spaces>
+        <max_characters_no_spaces>MAX_CHARS_PLACEHOLDER</max_characters_no_spaces>
+    </length_requirements>
 
     <analysis>
         Verifique a coesão, coerência e profundidade dos argumentos.
@@ -312,8 +313,8 @@ PROMPT_ATOMICO_MERGE = """
         Verificar se todo o texto, incluindo citações, estão na lingua Português do Brasil. Traduza as que não estiverem.
     </language>
 
-    <forbidden>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres.</forbidden>
-    <forbidden>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres.</forbidden>
+    <forbidden>Que o texto tenha menos de MIN_CHARS_PLACEHOLDER caracteres *desconsiderando os espaços*.</forbidden>
+    <forbidden>Que o texto tenha mais de MAX_CHARS_PLACEHOLDER caracteres *desconsiderando os espaços*.</forbidden>
     </instructions>
 
     <output>

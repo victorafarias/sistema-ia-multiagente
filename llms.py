@@ -26,11 +26,11 @@ def format_assistant_input(prompt_value):
 
 def parse_assistant_output(assistant_finish_object):
     """
-    (CORRIGIDO) Extrai a string de saída de um objeto OpenAIAssistantFinish.
+    Extrai a string de saída de um objeto AgentFinish.
     O resultado final do assistente está no dicionário `return_values`.
     """
-    # Verifica se o objeto recebido é do tipo esperado
-    if isinstance(assistant_finish_object, OpenAIAssistantFinish):
+    # 2. A verificação de tipo aqui deve usar 'AgentFinish', e não o nome antigo.
+    if isinstance(assistant_finish_object, AgentFinish):
         # A resposta final em string está na chave 'output' do dicionário return_values
         return assistant_finish_object.return_values.get('output', '')
     
