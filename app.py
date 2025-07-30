@@ -492,7 +492,7 @@ def merge():
                 "MAX_CHARS_PLACEHOLDER", str(max_chars)
             ).replace("<role>", f"<role>\n    {contexto}")  # injeta contexto
 
-            # --- renderiza e loga o prompt final Atomico Merge ---
+            # --- renderiza e loga o prompt final Atomico Merge --
             rendered_merge = updated_merge.format(
                 contexto=contexto,
                 resposta_sonnet=resposta_sonnet,
