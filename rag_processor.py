@@ -3,56 +3,45 @@
 import os
 from typing import List
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
 
-embeddings_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-
-def get_relevant_context(file_paths: List[str], user_query: str) -> str:
+def get_relevant_context(file_paths: List[str], user_query: str = None) -> str:
     """
-    Processa arquivos a partir de seus caminhos no disco, cria uma base de conhecimento
-    e retorna os trechos mais relevantes para a consulta do usuário.
+    Extrai o texto completo de todos os arquivos anexados e retorna como uma única string.
     """
-    documents = []
+    all_contents: List[str] = []
 
-    # 1. Carregar e Extrair Texto dos Arquivos a partir dos caminhos
     for file_path in file_paths:
         filename = os.path.basename(file_path)
-        
-        if filename.endswith(".pdf"):
-            loader = PyPDFLoader(file_path)
-        elif filename.endswith(".docx"):
-            loader = Docx2txtLoader(file_path)
-        elif filename.endswith(".txt"):
-            loader = TextLoader(file_path, encoding='utf-8')
-        else:
-            continue
-        
-        documents.extend(loader.load())
+        try:
+            # Escolhe o loader adequado
+            if filename.lower().endswith(".pdf"):
+                loader = PyPDFLoader(file_path)
+            elif filename.lower().endswith(".docx"):
+                loader = Docx2txtLoader(file_path)
+            elif filename.lower().endswith(".txt"):
+                loader = TextLoader(file_path, encoding='utf-8')
+            else:
+                # ignora formatos não suportados
+                continue
 
-    if not documents:
-        return "Nenhum documento de referência foi fornecido ou os formatos não são suportados."
+            # Carrega todos os documentos e concatena o conteúdo
+            docs = loader.load()
+            for doc in docs:
+                all_contents.append(doc.page_content)
 
-    # 2. Dividir o Texto em Chunks
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    texts = text_splitter.split_documents(documents)
+        except Exception as e:
+            # Log simples de erro de leitura, para você ver no console
+            print(f"[rag_processor] Erro ao carregar '{filename}': {e}", flush=True)
 
-    # 3. Criar a Base de Conhecimento Vetorial
-    vector_store = FAISS.from_documents(texts, embeddings_model)
-
-    # 4. Buscar os Chunks Mais Relevantes
-    retriever = vector_store.as_retriever(search_kwargs={"k": 4})
-    relevant_docs = retriever.invoke(user_query)
-
-    # 5. Formatar e Retornar o Contexto
-    context = "\n\n".join([doc.page_content for doc in relevant_docs])
-    
-    # Limpa os arquivos temporários após o uso
+    # Remove os arquivos temporários após a extração
     for file_path in file_paths:
         try:
             os.remove(file_path)
         except OSError as e:
-            print(f"Erro ao deletar o arquivo {file_path}: {e}")
-            
-    return context
+            print(f"[rag_processor] Erro ao deletar '{file_path}': {e}", flush=True)
+
+    if not all_contents:
+        return "Nenhum documento de referência foi fornecido ou os formatos não são suportados."
+
+    # Retorna todo o texto concatenado, separado por duas quebras de linha
+    return "\n\n".join(all_contents)
