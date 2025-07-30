@@ -922,7 +922,7 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
                 debugLog(`Progress atualizado: ${data.progress}%`);
             }
 
-            const processContent = (targetId, content, wordCount = null) => {
+            const processContent = (targetId, content) => {
                 debugLog(`Processando conteúdo para: ${targetId}`);
                 debugLog(`Tamanho do conteúdo: ${content.length} chars`);
                 
@@ -938,22 +938,19 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
 
                 if (targetId === 'final-output') {
                     const finalTitle = document.getElementById('final-result-title');
-                    finalTitle.textContent = `Texto Final`;
-                    if (wordCount) {
-                        finalTitle.textContent += ` (${wordCount} palavras)`;
-                    }
+                    finalTitle.textContent = `Texto Final (${content.length} Caracteres)`;
                     finalResultContainer.style.display = 'block';
                     debugLog("Final result container exibido");
-                    
-                    // Scroll automático para o texto final
+
                     setTimeout(() => {
-                        finalResultContainer.scrollIntoView({ 
-                            behavior: 'smooth', 
-                            block: 'start' 
-                        });
+                        finalResultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         debugLog("Scroll automático para texto final executado");
                     }, 500);
                 } else {
+                    const column = targetBox.closest('.result-column');
+                    const header = column.querySelector('.column-header h2');
+                    const base = header.textContent.split(' (')[0];
+                    header.textContent = `${base} (${content.length} Caracteres)`;
                     resultsContainer.style.display = 'flex';
                     debugLog("Results container exibido");
                 }
@@ -961,7 +958,7 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
 
             if (isMerge && data.final_result) {
                 debugLog("Processando final result do merge");
-                processContent('final-output', data.final_result.content, data.final_result.word_count);
+                processContent('final-output', data.final_result.content);
             } else if (data.partial_result) {
                 debugLog(`Processando partial result para: ${data.partial_result.id}`);
                 processContent(data.partial_result.id, data.partial_result.content);
