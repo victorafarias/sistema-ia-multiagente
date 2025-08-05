@@ -257,11 +257,11 @@ PROMPT_ATOMICO_MERGE = """
         <content>{solicitacao_usuario}</content>
     </user_request>
 
-    <text_grok>
-        <title>Texto Gerado pelo GROK:</title>
+    <text_openai>
+        <title>Texto Gerado pela OPEN AI:</title>
         <content>{texto_para_analise_openai}</content>
         
-    </text_grok>
+    </text_openai>
 
     <text_sonnet>
         <title>Texto Gerado pelo Sonnet:</title>
