@@ -296,7 +296,20 @@ def process():
 
                     claude_atomic_llm = claude_llm.bind(max_tokens=60000)
                     #models = {'grok': grok_llm, 'sonnet': claude_atomic_llm, 'gemini': gemini_llm, 'openai': openai_llm}
-                    models = {'sonnet': claude_atomic_llm, 'gemini': gemini_llm, 'openai': openai_llm}
+                    # Melhoria 05/08/2025 - Multi-modelo
+                    models = {}
+                    if form_data.get('modelo-openai') == 'on':
+                        models['openai'] = openai_llm
+                    if form_data.get('modelo-sonnet') == 'on':
+                        models['sonnet'] = claude_atomic_llm
+                    if form_data.get('modelo-gemini') == 'on':
+                        models['gemini'] = gemini_llm
+                    
+                    # Verificação se pelo menos um modelo foi selecionado
+                    if not models:
+                        json_data = safe_json_dumps({'error': 'Você deve selecionar pelo menos um modelo para processamento.'})
+                        yield f"data: {json_data}\n\n"
+                        return
                     
                     # Substituir os placeholders no template
                     updated_prompt_template = PROMPT_ATOMICO_INICIAL.replace(
@@ -555,6 +568,19 @@ def merge():
                 yield f"data: {json_data}\n\n"
                 return
             
+            # Monta lista só com os textos que vieram no payload
+            available = []
+            for campo in ('openai_text', 'sonnet_text', 'gemini_text'):
+                txt = data.get(campo)
+                if txt and txt.strip():
+                    available.append(txt)
+            if len(available) < 2:
+                json_data = safe_json_dumps({
+                    'error': 'Para processar o merge, deve haver pelo menos dois textos gerados.'
+                })
+                yield f"data: {json_data}\n\n"
+                return
+
             output_parser = StrOutputParser()
             
             # Atualizar o template de merge com os parâmetros de tamanho padrão
@@ -578,6 +604,8 @@ def merge():
             # MUDANÇA: Usar Claude Sonnet para o merge
             claude_with_max_tokens = claude_llm.bind(max_tokens=64000)
             chain_merge = prompt_merge | claude_with_max_tokens | output_parser
+
+
 
             json_data = safe_json_dumps({'progress': 50, 'message': 'Enviando textos para o Claude Sonnet para consolidação...'})
             yield f"data: {json_data}\n\n"

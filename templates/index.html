@@ -511,6 +511,19 @@
                     </div>
                 </div>
 
+                <!-- Melhoria 05/08/2025 - Multi-modelo -->
+                <div id="modelo-container" style="display:none;">
+                    <label>Escolha os modelos:</label>
+                    <div>
+                        <input type="checkbox" id="modelo-openai" name="modelo-openai" checked>
+                        <label for="modelo-openai">OpenAI</label>
+                        <input type="checkbox" id="modelo-sonnet" name="modelo-sonnet" checked>
+                        <label for="modelo-sonnet">Sonnet</label>
+                        <input type="checkbox" id="modelo-gemini" name="modelo-gemini" checked>
+                        <label for="modelo-gemini">Gemini</label>
+                    </div>
+                </div>
+
                 <button type="submit">Processar com IA</button>
             </form>
         </div>
@@ -579,6 +592,9 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
     <script>
         // --- Variáveis Globais ---
         const processingModeSwitch = document.getElementById('processing-mode-switch');
+        // Melhoria 05/08/2025 - Multi-modelo
+        const modeloContainer = document.getElementById('modelo-container');
+        modeloContainer.style.display = this.checked ? 'block' : 'none';
         const modeSwitch = document.getElementById('mode-switch');
         const realContainer = document.getElementById('real-form-container');
         const mockContainer = document.getElementById('mock-form-container');
@@ -610,8 +626,14 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
             mockContainer.style.display = this.checked ? 'block' : 'none';
         });
         
+        // Melhoria 05/08/2025 - Multi-modelo
         processingModeSwitch.addEventListener('change', function() {
             const isAtomic = this.checked;
+
+            // Melhoria 05/08/2025 - Multi-modelo (Corrigido)
+            const modeloContainer = document.getElementById('modelo-container');
+            modeloContainer.style.display = isAtomic ? 'block' : 'none';
+
             document.getElementById('flow-description').textContent = isAtomic ? 
                 "OPEN AI | Claude Sonnet | Gemini (Paralelo)" : 
                 "OPEN AI ➔ Claude Sonnet ➔ Gemini";
@@ -700,6 +722,7 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
         document.getElementById('request-form-mock').addEventListener('submit', handleFormSubmit);
         
         async function handleFormSubmit(event) {
+            console.clear();
             event.preventDefault();
             debugLog("=== FORM SUBMIT INICIADO ===");
             currentProcessingType = 'main';
@@ -732,6 +755,16 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
             // Adicionar parâmetros de tamanho
             formData.append('min_chars', document.getElementById('min_chars').value);
             formData.append('max_chars', document.getElementById('max_chars').value);
+
+            // Melhoria 05/08/2025 - Multi-modelo: envia os check-boxes ao servidor
+            if (processingModeSwitch.checked) {
+                ['openai','sonnet','gemini'].forEach(m => {
+                    const id = `modelo-${m}`;
+                    if (document.getElementById(id).checked) {
+                        formData.append(id, 'on');
+                    }
+                });
+            }
             
             if (modeSwitch.checked) {
                 formData.append('mode', 'test');
@@ -815,6 +848,16 @@ Use o botão `Converter para MD` para ver a mágica.</textarea>
         mergeBtn.addEventListener('click', async function() {
             debugLog("=== MERGE BUTTON CLICADO ===");
             currentProcessingType = 'merge';
+
+            // Melhoria 05/08/2025 - validação antes de chamar o servidor
+            const filled = ['openai-output','sonnet-output','gemini-output']
+                .map(id => rawTexts[id])
+                .filter(text => text && text.trim().length > 0)
+                .length;
+            if (filled < 2) {
+                showError('Para processar o merge, deve haver pelo menos dois textos gerados.');
+                return;
+            }
             
             loaderMessage.textContent = 'Processando o merge dos textos...';
             progressBar.style.width = '0%';
