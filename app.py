@@ -383,10 +383,13 @@ def process():
                 
                 else:
                     log_print("=== MODO HIERÁRQUICO SELECIONADO ===")
-                    # --- LÓGICA HIERÁRQUICA (SEQUENCIAL) ---
                     
-                    # Atualizar prompts hierárquicos com parâmetros de tamanho
-                    ##updated_grok_template = PROMPT_HIERARQUICO_GROK.replace(
+                    # *** INÍCIO DA CORREÇÃO ***
+                    # Definição das variáveis de simulação ANTES de serem usadas.
+                    resposta_openai_simulada_para_log = "Texto gerado pela OpenAI (simulação para log)..."
+                    resposta_sonnet_simulada_para_log = "Texto revisado pelo Sonnet (simulação para log)..."
+                    # *** FIM DA CORREÇÃO ***
+
                     updated_openai_template = PROMPT_HIERARQUICO_OPENAI.replace(
                         "MIN_CHARS_PLACEHOLDER", str(min_chars)
                     ).replace(
@@ -412,7 +415,7 @@ def process():
                     ##          f"{updated_sonnet_template.format(contexto=contexto, solicitacao_usuario=solicitacao_usuario, texto_para_analise=resposta_grok)}\n""-"*80)
                     
                     log_print(f"[DEBUG] PROMPT HIERÁRQUICO SONNET RENDERED:\n"
-                              f"{updated_sonnet_template.format(contexto=contexto, solicitacao_usuario=solicitacao_usuario, texto_para_analise=resposta_openai)}\n""-"*80)
+                        f"{updated_sonnet_template.format(contexto=contexto, solicitacao_usuario=solicitacao_usuario, texto_para_analise=resposta_openai_simulada_para_log)}\n""-"*80)
 
                     updated_gemini_template = PROMPT_HIERARQUICO_GEMINI.replace(
                         "MIN_CHARS_PLACEHOLDER", str(min_chars)
@@ -422,9 +425,8 @@ def process():
 
                     # --- renderiza e loga o prompt final Hierárquico Gemini ---
                     log_print(f"[DEBUG] PROMPT HIERÁRQUICO GEMINI RENDERED:\n"
-                              f"{updated_gemini_template.format(contexto=contexto, solicitacao_usuario=solicitacao_usuario, texto_para_analise=resposta_sonnet)}\n""-"*80)
-                    
-                    ##json_data = safe_json_dumps({'progress': 15, 'message': 'O GROK está processando sua solicitação...'})
+                              f"{updated_gemini_template.format(contexto=contexto, solicitacao_usuario=solicitacao_usuario, texto_para_analise=resposta_sonnet_simulada_para_log)}\n""-"*80)
+                                        
                     json_data = safe_json_dumps({'progress': 15, 'message': 'A OPEN AI está processando sua solicitação...'})
                     yield f"data: {json_data}\n\n"
                     
@@ -440,9 +442,10 @@ def process():
                     #log_print(f"=== GROK TERMINOU: {len(resposta_grok)} chars ===")
                     
                     log_print("=== PROCESSANDO OPEN AI ===")
-                    openai_with_max_tokens = openai_llm.bind(max_completion_tokens=100000)
+                    # openai_with_max_tokens = openai_llm.bind(max_completion_tokens=100000)
                     prompt_openai = PromptTemplate(template=updated_openai_template, input_variables=["contexto", "solicitacao_usuario", "rag_context"])
-                    chain_openai = prompt_openai | openai_with_max_tokens | output_parser
+                    # chain_openai = prompt_openai | openai_with_max_tokens | output_parser
+                    chain_openai = prompt_openai | openai_llm | output_parser
                     resposta_openai = chain_openai.invoke({"contexto": contexto, "solicitacao_usuario": solicitacao_usuario, "rag_context": rag_context})
                     
                     log_print(f"=== OPEN AI TERMINOU: {len(resposta_openai)} chars ===")

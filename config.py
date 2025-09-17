@@ -2,7 +2,7 @@
 
 # --- PROMPTS PARA O MODO HIERÁRQUICO ---
 
-PROMPT_HIERARQUICO_GROK = """
+PROMPT_HIERARQUICO_OPENAI = """
 <prompt>
   <role>
     {contexto}
