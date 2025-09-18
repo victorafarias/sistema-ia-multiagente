@@ -4,56 +4,7 @@ import sys
 import os
 import subprocess
 import importlib.util
-
-'''
-print("--- INÍCIO DO DEBUG ---", flush=True)
-
-# 1. Onde o Python está procurando por pacotes?
-print("\n[1] Sys Path (Caminhos de Busca):", flush=True)
-for path in sys.path:
-    print(f"  - {path}", flush=True)
-
-# 2. Quais pacotes estão realmente instalados (usando pip)?
-print("\n[2] Pacotes Instalados (pip list):", flush=True)
-try:
-    result = subprocess.run(
-        [sys.executable, '-m', 'pip', 'list'],
-        capture_output=True,
-        text=True,
-        check=True
-    )
-    print(result.stdout, flush=True)
-except Exception as e:
-    print(f"  ERRO ao rodar 'pip list': {e}", flush=True)
-
-
-# 3. Vamos verificar especificamente o langchain-openai
-print("\n[3] Verificando 'langchain_openai':", flush=True)
-try:
-    spec = importlib.util.find_spec('langchain_openai')
-    if spec:
-        print(f"  Pacote encontrado: {spec.name}", flush=True)
-        print(f"  Localização: {spec.origin}", flush=True)
-        if spec.submodule_search_locations:
-            package_dir = spec.submodule_search_locations[0]
-            print(f"  Pasta do pacote: {package_dir}", flush=True)
-            print("  Conteúdo da pasta do pacote:", flush=True)
-            try:
-                for item in os.listdir(package_dir):
-                    print(f"    - {item}", flush=True)
-            except Exception as e:
-                print(f"    ERRO ao listar diretório: {e}", flush=True)
-    else:
-        print("  PACOTE 'langchain_openai' NÃO FOI ENCONTRADO PELO IMPORTLIB!", flush=True)
-
-except Exception as e:
-    print(f"  ERRO ao tentar encontrar 'langchain-openai': {e}", flush=True)
-
-
-print("\n--- FIM DO DEBUG ---", flush=True)
-'''
-
-from flask import Flask, render_template, request, Response, jsonify
+from flask import Flask, render_template, request, Response, jsonify, session, redirect, url_for
 import json
 import time
 import uuid
@@ -63,6 +14,10 @@ from html import escape, unescape
 import re
 from markdown_it import MarkdownIt
 from markdown2 import markdown as markdown2_render
+from dotenv import load_dotenv
+
+# Carrega as variáveis de ambiente do arquivo .env
+load_dotenv()
 
 # Força o flush dos prints para aparecer nos logs do container
 sys.stdout.reconfigure(line_buffering=True)
@@ -73,7 +28,7 @@ from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 # Importa os LLMs
-from llms import claude_llm, gemini_llm, openai_llm#, grok_llm
+from llms import claude_llm, gemini_llm, openai_llm
 
 # Importa os prompts
 from config import *
@@ -82,6 +37,9 @@ from config import *
 from rag_processor import get_relevant_context
 
 app = Flask(__name__)
+
+# Configuração da chave secreta para sessões
+app.secret_key = os.getenv("SECRET_KEY")
 
 # Garante que o diretório de uploads exista
 if not os.path.exists('uploads'):
@@ -99,6 +57,8 @@ def log_print(message):
     """Função para garantir que os logs apareçam no container"""
     print(f"[DEBUG] {message}", flush=True)
     sys.stdout.flush()
+
+# ... (Mantenha as funções safe_json_dumps, merge_full_content, render_markdown_cascata, is_html_empty) ...
 
 def safe_json_dumps(data):
     """Função para criar JSON de forma segura, com tratamento de strings muito grandes"""
@@ -164,14 +124,38 @@ def is_html_empty(html: str) -> bool:
     # 4. Verifica se o texto restante (após remover espaços nas pontas) está de fato vazio
     return not normalized_space.strip()
 
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        # Valida as credenciais com as variáveis de ambiente
+        if request.form['username'] == os.getenv('APP_USER') and request.form['password'] == os.getenv('APP_PASSWORD'):
+            session['logged_in'] = True
+            return redirect(url_for('index'))
+        else:
+            error = 'Credenciais inválidas. Tente novamente.'
+    return render_template('login.html', error=error)
+
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    return redirect(url_for('login'))
+
+
 @app.route('/')
 def index():
     """Renderiza a página inicial da aplicação."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
     return render_template('index.html')
 
+# ... (Mantenha o restante do seu código de rotas: /convert, /cancel, /get-full-content, /process, /merge) ...
 # ROTA ATUALIZADA: Para converter texto em Markdown sob demanda
 @app.route('/convert', methods=['POST'])
 def convert():
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Não autorizado'}), 401
     data = request.get_json()
     if not data or 'text' not in data:
         return jsonify({'error': 'Nenhum texto fornecido'}), 400
@@ -184,6 +168,8 @@ def convert():
 # NOVA ROTA: Para cancelar processamento
 @app.route('/cancel', methods=['POST'])
 def cancel():
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Não autorizado'}), 401
     global processing_cancelled
     processing_cancelled = True
     log_print("=== PROCESSAMENTO CANCELADO PELO USUÁRIO ===")
@@ -192,6 +178,8 @@ def cancel():
 # NOVA ROTA: Para obter o conteúdo completo do merge
 @app.route('/get-full-content', methods=['POST'])
 def get_full_content():
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Não autorizado'}), 401
     global merge_full_content
     data = request.get_json()
     content_type = data.get('type', 'merge')
@@ -204,6 +192,8 @@ def get_full_content():
 @app.route('/process', methods=['POST'])
 def process():
     """Processa a solicitação do usuário nos modos Hierárquico ou Atômico."""
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Não autorizado'}), 401
     global processing_cancelled
     processing_cancelled = False  # Reset do flag de cancelamento
     
@@ -544,6 +534,8 @@ def process():
 @app.route('/merge', methods=['POST'])
 def merge():
     """Recebe os textos do modo Atômico e os consolida usando Claude Sonnet."""
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Não autorizado'}), 401
     global merge_full_content, processing_cancelled
     processing_cancelled = False  # Reset do flag
     
@@ -669,6 +661,7 @@ def merge():
             
     return Response(generate_merge_stream(), mimetype='text/event-stream')
 
+
 if __name__ == '__main__':
     log_print("=== SERVIDOR FLASK INICIADO ===")
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=7860)
